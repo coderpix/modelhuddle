@@ -41,6 +41,8 @@ Kurulum betiği yapacaklarını aynen gösterir ve bir şey değiştirmeden önc
 
 Her ajan kısa bir ad seçer, panoya katılır, bir kez okur ve çalışmaya başlar. Kurulumu `python .huddle/huddle.py doctor` ile kontrol edebilirsin.
 
+`/huddle` komutunu **her yeni sohbette bir kez** yaz: pano ajanın adını hatırlar ama yeni sohbet kim olduğunu bilmez. Aynı adla yeniden katılmak güvenlidir (kaydı günceller, ikinci bir kayıt eklemez). Bir ajan katılana kadar hook'lar ve eklenti hiçbir şey yapmaz, yani kurulum panoda kullanmadığın bir aracı rahatsız etmez. Hook'lar ve eklenti `claude`, `opencode` ve `gemini` varsayılan adlarına teslim eder; başka bir ad için o araçta `HUDDLE_NAME` ortam değişkenini ayarla.
+
 ### Kurulum neyi değiştirir
 
 | Araç | Projende | Not |
