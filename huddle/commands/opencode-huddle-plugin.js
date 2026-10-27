@@ -1,7 +1,9 @@
 // modelhuddle plugin for OpenCode: wakes an idle session when new board messages arrive.
 //
-// When a session finishes a turn, check this agent's inbox; if there are unread messages, hand
-// them to the session as a new prompt. Messages are labelled as data, never as instructions.
+// When a session finishes a turn, and then every few seconds while it stays idle, check this
+// agent's inbox; if there are unread messages, hand them to the session as a new prompt.
+// Polling only reads a local file, it never calls a model. Messages are labelled as data, never
+// as instructions. HUDDLE_POLL_SECONDS sets the polling interval (default 5, 0 = only at turn end).
 // No network access. Every error is swallowed, so the plugin cannot break a session.
 // Agent name: HUDDLE_NAME env var, else "opencode". Active only after the agent has joined.
 //
@@ -13,6 +15,7 @@ import { join } from "node:path"
 
 const WHO = (process.env.HUDDLE_NAME || "opencode").trim().toLowerCase()
 const MAX_CHARS = 2000
+const POLL_MS = Math.max(0, Number(process.env.HUDDLE_POLL_SECONDS ?? 5)) * 1000
 
 function makeWake(directory, send) {
   const stateDir = process.env.HUDDLE_DIR || join(directory, ".huddle", "state")
@@ -26,6 +29,15 @@ function makeWake(directory, send) {
     }
   }
 
+  const hasUnread = () => {
+    try {
+      const chat = JSON.parse(readFileSync(join(stateDir, "chat.json"), "utf8"))
+      return chat.some((m) => m.from !== WHO && (m.to === WHO || m.to === "all") && !m.read_by.includes(WHO))
+    } catch {
+      return false
+    }
+  }
+
   const inbox = () =>
     new Promise((resolve) => {
       execFile("python", [join(directory, ".huddle", "huddle.py"), "inbox", "--as", WHO],
@@ -33,8 +45,8 @@ function makeWake(directory, send) {
         (err, stdout) => resolve(err ? "" : String(stdout).trim()))
     })
 
-  return async (sessionID) => {
-    if (busy || !sessionID || !joined()) return
+  const wake = async (sessionID) => {
+    if (busy || !sessionID || !joined() || !hasUnread()) return
     busy = true
     try {
       const out = await inbox()
@@ -47,6 +59,7 @@ function makeWake(directory, send) {
       busy = false
     }
   }
+  return wake
 }
 
 // OpenCode v2
@@ -54,17 +67,30 @@ export default {
   id: "huddle",
   setup(ctx) {
     const wake = makeWake(ctx.location.directory, (sessionID, text) => ctx.session.prompt({ sessionID, text }))
+    const idle = new Set() // sessions whose turn has ended, oldest first
     const stop = new AbortController()
     void (async () => {
       try {
-        for await (const ev of ctx.event.subscribe({ types: ["session.execution.succeeded"], signal: stop.signal })) {
-          if (ev.type === "session.execution.succeeded") void wake(ev.data?.sessionID)
+        for await (const ev of ctx.event.subscribe({ signal: stop.signal })) {
+          const id = ev.data?.sessionID
+          if (!id) continue
+          if (ev.type === "session.execution.started") idle.delete(id)
+          else if (ev.type === "session.execution.succeeded") {
+            idle.delete(id)
+            idle.add(id)
+            void wake(id)
+          } else if (ev.type === "session.execution.failed" || ev.type === "session.execution.interrupted") idle.delete(id)
+          else if (ev.type === "session.deleted") idle.delete(id)
         }
       } catch {
         // subscription ended
       }
     })()
-    return () => stop.abort()
+    const timer = POLL_MS ? setInterval(() => { const last = [...idle].pop(); if (last) void wake(last) }, POLL_MS) : null
+    return () => {
+      stop.abort()
+      if (timer) clearInterval(timer)
+    }
   },
 }
 

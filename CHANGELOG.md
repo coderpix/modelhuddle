@@ -3,11 +3,12 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0] - 2026-10-27
 
 ### Added
+- README: recommended way to work, wake-up table per tool, and a warning that Antigravity's user-level MCP config names a single project.
 - Antigravity: `.agents/hooks.json` entry (works with the Antigravity CLI; uses a quote-free relative command because Antigravity does not handle quoted paths) (`PreInvocation` injects unread messages, `Stop` continues the agent when new ones arrive). `huddle_hook.py` now speaks the Antigravity protocol and accepts `--name`.
-- OpenCode: plugin `.opencode/plugins/huddle.js` that prompts a session with unread messages when it finishes a turn (OpenCode v2 plugin format, plus the v1 entry point).
+- OpenCode: plugin `.opencode/plugins/huddle.js` that prompts a session with unread messages when it finishes a turn and then every `HUDDLE_POLL_SECONDS` (default 5) while it stays idle, by reading a local file (OpenCode v2 plugin format, plus the v1 entry point). Verified on OpenCode v2.0.26 and v2.2.0.
 - File claims now understand directories and globs (`src/`, `docs/*.md`), not just exact file names.
 - Stale claims are released automatically when another agent hits a conflict: the holder has not touched the board for `HUDDLE_STALE_MINUTES` (default 120, `0` disables). `status` marks them as stale.
 

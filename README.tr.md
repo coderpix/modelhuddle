@@ -9,10 +9,10 @@
 Her yapay zeka aracı kendi sohbetinde çalışır. Birbirlerini göremezler, bu yüzden bağlamı elle kopyalarsın ve aynı dosyayı birlikte düzenleyebilirler. modelhuddle projenin içine küçük bir ortak defter koyar:
 
 - **Takım:** her ajan kim olduğunu ve neyde iyi olduğunu yazar.
-- **Görevler ve sahiplenme:** ajan işe başlamadan görevi (ve dosyalarını) sahiplenir; başka bir ajan aynı dosyaları almaya çalışırsa reddedilir.
+- **Görevler ve sahiplenme:** ajan işe başlamadan görevi (ve dosyalarını) sahiplenir; başka bir ajan aynı dosyaları almaya çalışırsa reddedilir. Sahiplenme klasör ve glob anlar (`src/`, `docs/*.md`), sahibi sessizleşen bir sahiplenme kendiliğinden bırakılır.
 - **Mesajlar:** ajanlar birbirine (veya herkese) yazar (`say` / `inbox`).
 - **Devir:** bir ajanın kullanım limiti dolarsa devir notu yazar, diğeri devam eder.
-- **Ucuz bekleme:** bir ajan cevabı token harcamadan bekleyebilir.
+- **Ucuz bekleme:** bir ajan cevabı token harcamadan bekleyebilir, boştaki ajanlar mesaj gelince uyandırılır.
 
 Python 3.10+ ve yalnızca standart kütüphane ile yazılmış birkaç yüz satırlık bir koddur. Güvenmeden önce tamamını okuyabilirsin.
 
@@ -64,6 +64,30 @@ python install.py /proje/klasorun --user-config
 
 Antigravity'nin gerçekten okuduğu dosya `~/.gemini/config/mcp_config.json`'dır (`~/.gemini/antigravity/mcp_config.json` eski, taşınmış konumdur ve okunmaz). `command` alanına Python'un tam yolunu yaz, çünkü IDE farklı bir `PATH` ile çalışıyor olabilir. Düzenledikten sonra Antigravity'yi yeniden başlat ve **Manage MCPs** ekranını aç: `huddle` 9 araçla listelenmeli. **Yeni** bir sohbet aç, çünkü araç listesi sohbet başında oluşur. MCP olmadan da ajan kabuk komutlarıyla çalışır.
 
+> **Kullanıcı başına tek pano:** `mcp_config.json` tüm Antigravity pencereleri için ortaktır ve tek bir sabit betik yolu içerir. Başka bir projenin `.huddle/` klasörünü gösteriyorsa (örneğin eski bir kurulumdan), ajan açtığın projenin değil o projenin panosuyla konuşur. Aynı anda tek proje kullan, girdiyi doğru projeye yönlendir ya da ajana yalnızca kabuk komutlarını (`python .huddle/huddle.py ...`) kullanmasını söyle.
+
+Hook'lar projede (`.agents/hooks.json`) durur ve Antigravity CLI'da (`agy`) çalışır. Antigravity onları `.agents` klasöründen çalıştırır ve tırnaklı yolları anlamaz, bu yüzden kurulum `python ../.huddle/huddle_hook.py --name gemini` yazar; `python` senin `PATH`'inde olmalı.
+
+## Önerilen çalışma şekli
+
+1. Takımda olmasını istediğin her aracı (Claude Code, OpenCode, Antigravity CLI `agy`, ...) proje klasöründe aç. Terminal uygulamaları, örneğin editörünün içinde, terminal sekmelerinde yan yana çalışabilir.
+2. Her birinde bir kez `/huddle` yaz. Her biri kendi adıyla panoya katılır.
+3. Sadece ana beyin seçtiğin modele konuş: `/huddle ayarlar sayfası yap`. İşi görevlere böler, her birine sahip yazar ve diğerlerine mesaj bırakır.
+4. Diğerleri mesaj gelince uyanır, görevini sahiplenir, yapar ve `done` ile bildirir. Beklemek token harcamaz: ajan boştayken bir modele hiçbir şey gönderilmez.
+
+Diğer araçların pencerelerini açık tut: uyandırılan ajanın çalışan bir oturumu olmalı (bkz. *Araca göre uyandırma*). Yeni bir sohbet mi açtın? İçinde yine `/huddle` yaz.
+
+### Araca göre uyandırma
+
+| Araç | Mesaj ajana nasıl ulaşır | Boştaki ajan uyanır mı? |
+|---|---|---|
+| Claude Code | hook'lar (araç çağrısından sonra, tur başında ve tur bitince) | yalnızca bekliyorsa (`huddle_wait` / arka planda `huddle.py wait`); boştayken hook çalışmaz |
+| OpenCode (v2) | eklenti: tur bitince ve sonra her 5 sn'de (`HUDDLE_POLL_SECONDS`, `0` = yalnızca tur sonu) bir dosyayı okuyarak gelen kutusuna bakar | evet, saniyeler içinde (v2.0.26 ve v2.2.0'da doğrulandı) |
+| Antigravity CLI (`agy`) | `.agents/hooks.json`: `PreInvocation` okunmamış mesajları ekler | çalışırken veya beklerken; `Stop` ajanı çalışır tutar ama canlı görülmedi |
+| Antigravity IDE | yok (denediğim sürümde Hooks sekmesi yok) | hayır; ajan gelen kutusunu kendisi okur |
+
+Kapalı bir sohbeti başlatan bir şey yok.
+
 ## Günlük kullanım
 
 ```text
@@ -100,10 +124,11 @@ python .huddle/huddle.py done 1 --as gemini --note "düğme çalışıyor"
 - `status` varsayılan olarak kısadır (takım ve açık görevler). Ajanlara panoyu başlangıçta **bir kez** okuyup tekrar tekrar yoklamamaları söylenir; `status --all` pahalı tam çıktıdır.
 - Bekleme `huddle_wait` veya arka planda `huddle.py wait` ile yapılır, sohbet ederek değil.
 - Claude Code hook'u yalnızca okunmamış mesajları, kısaltılmış ve birkaç satır olarak ekler.
+- OpenCode eklentisi yerel bir dosyayı okuyarak yoklar; model yalnızca teslim edilecek bir şey olduğunda çağrılır.
 
 ## Güvenlik
 
-- Yalnızca standart kütüphane; ağ erişimi yok, alt süreç yok, çalışma sırasında hiçbir şey indirilmez veya çalıştırılmaz. Kurulum yalnızca bu depodaki dosyaları kopyalar.
+- Yalnızca standart kütüphane; ağ erişimi yok, çalışma sırasında hiçbir şey indirilmez. Hook'lar yalnızca `huddle_hook.py`'yi, OpenCode eklentisi yalnızca bu depodaki `huddle.py`'yi (`inbox`) çalıştırır. Kurulum yalnızca bu depodaki dosyaları kopyalar.
 - Diğer ajanlardan gelen mesajlar **veri, talimat değil** olarak etiketlenir; mesaj metni hiçbir zaman çalıştırılmaz.
 - Kullanıcı girdisi komut satırına `--` ayırıcısından sonra geçer, bayrak olarak okunamaz (MCP üzerinden dahil test edildi).
 - Ajan adları kısa bir slug kuralına uymalıdır (`[a-z0-9._-]`, en fazla 31 karakter).
@@ -115,8 +140,8 @@ Güvenlik açıklarını özel olarak e-postayla bildir: security@coderpix.com (
 
 ## Sınırlar (dürüst liste)
 
-- Otomatik teslim araca göre değişir. Claude Code: hook'lar. Antigravity: `.agents/hooks.json` (`PreInvocation` mesajları ekler, `Stop` yeni mesaj geldiğinde ajanı çalışmaya devam ettirir). OpenCode: oturum bir turu bitirince oturuma istek gönderen bir eklenti (OpenCode v2.0.26'da doğrulandı; eski v1 giriş noktası denenmedi). Antigravity hook'ları Antigravity CLI'da (`agy` 1.4.8) doğrulandı; denediğim Antigravity IDE sürümünde Hooks sekmesi yoktu, orada çalışmıyorlar. `Stop` (ajanı çalışır tutma) testlerle kapsanıyor ama canlı görülmedi. Kapalı bir sohbeti başlatan bir şey yok.
-- Çakışma koruması, görev listesindeki dosya yollarına göre yapılır; dosya sistemini veya git'i izlemez.
+- Uyandırma araca göre değişir, yukarıdaki tabloya bak. Boşta bekleyip `wait` kullanmayan Claude Code ve Antigravity ajanları hook'larla uyandırılmaz. Antigravity'deki `Stop` (ajanı çalışır tutma) testlerle kapsanıyor ama canlı görülmedi; eski OpenCode v1 giriş noktası denenmedi. Kapalı bir sohbeti başlatan bir şey yok.
+- Çakışma koruması, görevlere yazılan dosya, klasör ve glob desenlerine göre çalışır; dosya sistemini veya git'i izlemez. Sahibi `HUDDLE_STALE_MINUTES` süre (varsayılan 120) sessiz kalan bir sahiplenme, biri onunla çakışınca bırakılır.
 - Durum tek makineye ve tek proje klasörüne özeldir; ağ üzerinden senkronizasyon yok.
 - Panel yok. hcom veya Concord MCP gibi projeler daha fazla özellik sunar (daha çok araçta boşta uyandırma, daha zengin çakışma yönetimi, arayüz); modelhuddle bunların yerine küçük, bağımlılıksız ve denetlenebilir olmayı seçer.
 - OpenCode ve Claude Code ayar biçimleri güncel sürümlerine göre yazıldı; kurulumdan sonra `opencode mcp list` / `/mcp` ile kontrol et.
@@ -135,7 +160,7 @@ Kurulumun eklediklerini (yalnızca birleştirilen anahtarlar, diğer ayarların 
 python -m unittest discover -s tests -v
 ```
 
-21 test geçici klasörlerde çalışır, gerçek ayarlarına dokunmaz.
+24 test geçici klasörlerde çalışır, gerçek ayarlarına dokunmaz.
 
 ## Lisans
 
