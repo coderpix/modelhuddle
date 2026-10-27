@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Antigravity: `.agents/hooks.json` entry (`PreInvocation` injects unread messages, `Stop` continues the agent when new ones arrive). `huddle_hook.py` now speaks the Antigravity protocol and accepts `--name`.
+- OpenCode: plugin `.opencode/plugins/huddle.js` that prompts an idle session with unread messages.
 - File claims now understand directories and globs (`src/`, `docs/*.md`), not just exact file names.
 - Stale claims are released automatically when another agent hits a conflict: the holder has not touched the board for `HUDDLE_STALE_MINUTES` (default 120, `0` disables). `status` marks them as stale.
 

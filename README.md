@@ -24,7 +24,7 @@ It is a few hundred lines of plain Python (3.10+, standard library only), so you
  OpenCode    ──┘     (shell or tools)
 ```
 
-State is a few JSON files. Writes are atomic and serialised with a lock file, so several agents writing at once never corrupt or lose messages. Each tool reaches the board either through shell commands (`python .huddle/huddle.py ...`) or through MCP tools (`huddle_say`, `huddle_inbox`, ...). In Claude Code an optional hook also delivers new messages automatically while the model is working.
+State is a few JSON files. Writes are atomic and serialised with a lock file, so several agents writing at once never corrupt or lose messages. Each tool reaches the board either through shell commands (`python .huddle/huddle.py ...`) or through MCP tools (`huddle_say`, `huddle_inbox`, ...). Optional hooks (Claude Code, Antigravity) and a plugin (OpenCode) also deliver new messages automatically.
 
 ## Quick start
 
@@ -113,7 +113,7 @@ Report vulnerabilities privately by email: security@coderpix.com (see [SECURITY.
 
 ## Limits (honest list)
 
-- Only Claude Code gets automatic message delivery (hook). Other tools see messages when they call `inbox` or `huddle_wait`; nothing wakes a fully idle chat by itself.
+- Automatic delivery differs per tool. Claude Code: hooks. Antigravity: `.agents/hooks.json` (`PreInvocation` injects messages, `Stop` keeps the agent going when new ones arrive). OpenCode: a plugin that prompts the session when it goes idle. The Antigravity and OpenCode integrations follow the vendors' documentation but have not been tested against the live apps yet. Nothing starts a chat that is closed.
 - Conflict protection is by file path from the task list, not by watching the file system or git.
 - State is local to one machine and one project folder; there is no network sync.
 - No dashboard. Other projects such as hcom or Concord MCP offer more features (idle wake-up for more tools, richer conflict handling, UI); modelhuddle trades those for being small, dependency-free and auditable.

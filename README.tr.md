@@ -24,7 +24,7 @@ Python 3.10+ ve yalnızca standart kütüphane ile yazılmış birkaç yüz sat�
  OpenCode    ──┘     (kabuk veya araç)
 ```
 
-Durum birkaç JSON dosyasıdır. Yazmalar atomiktir ve kilit dosyasıyla sıralanır, bu yüzden birden fazla ajan aynı anda yazsa bile mesaj bozulmaz ve kaybolmaz. Her araç panoya ya kabuk komutlarıyla (`python .huddle/huddle.py ...`) ya da MCP araçlarıyla (`huddle_say`, `huddle_inbox`, ...) ulaşır. Claude Code'da isteğe bağlı bir hook, model çalışırken yeni mesajları kendiliğinden de teslim eder.
+Durum birkaç JSON dosyasıdır. Yazmalar atomiktir ve kilit dosyasıyla sıralanır, bu yüzden birden fazla ajan aynı anda yazsa bile mesaj bozulmaz ve kaybolmaz. Her araç panoya ya kabuk komutlarıyla (`python .huddle/huddle.py ...`) ya da MCP araçlarıyla (`huddle_say`, `huddle_inbox`, ...) ulaşır. İsteğe bağlı hook'lar (Claude Code, Antigravity) ve bir eklenti (OpenCode) yeni mesajları kendiliğinden de teslim eder.
 
 ## Hızlı başlangıç
 
@@ -113,7 +113,7 @@ Güvenlik açıklarını özel olarak e-postayla bildir: security@coderpix.com (
 
 ## Sınırlar (dürüst liste)
 
-- Otomatik mesaj teslimi yalnızca Claude Code'da var (hook). Diğer araçlar mesajı `inbox` veya `huddle_wait` çağırınca görür; tamamen boşta bir sohbeti kendiliğinden uyandıran bir şey yok.
+- Otomatik teslim araca göre değişir. Claude Code: hook'lar. Antigravity: `.agents/hooks.json` (`PreInvocation` mesajları ekler, `Stop` yeni mesaj geldiğinde ajanı çalışmaya devam ettirir). OpenCode: oturum boşa düşünce oturuma istek gönderen bir eklenti. Antigravity ve OpenCode entegrasyonları üreticilerin belgelerine göre yazıldı ama henüz gerçek uygulamalarda denenmedi. Kapalı bir sohbeti başlatan bir şey yok.
 - Çakışma koruması, görev listesindeki dosya yollarına göre yapılır; dosya sistemini veya git'i izlemez.
 - Durum tek makineye ve tek proje klasörüne özeldir; ağ üzerinden senkronizasyon yok.
 - Panel yok. hcom veya Concord MCP gibi projeler daha fazla özellik sunar (daha çok araçta boşta uyandırma, daha zengin çakışma yönetimi, arayüz); modelhuddle bunların yerine küçük, bağımlılıksız ve denetlenebilir olmayı seçer.

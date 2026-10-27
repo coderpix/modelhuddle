@@ -242,6 +242,25 @@ class HookTests(Base):
         self.assertEqual(out["decision"], "block")
         self.assertIn("m2", out["reason"])
 
+    def test_antigravity_protocol(self):
+        huddle(self.state, "join", "--as", "gemini")
+        huddle(self.state, "say", "m1", "--as", "claude", "--to", "gemini")
+        e = env_for(self.state)
+
+        def run(payload):
+            r = subprocess.run([PY, str(SRC / "huddle_hook.py"), "--name", "gemini"], input=json.dumps(payload),
+                               env=e, capture_output=True, text=True, encoding="utf-8", timeout=30)
+            self.assertEqual(r.returncode, 0)
+            return r.stdout
+
+        out = json.loads(run({"executionNum": 1, "terminationReason": "model_stop", "fullyIdle": True}))
+        self.assertEqual(out["decision"], "continue")
+        self.assertIn("m1", out["reason"])
+        self.assertEqual(run({"executionNum": 2, "fullyIdle": True}), "")  # delivered once, then lets it stop
+        huddle(self.state, "say", "m2", "--as", "claude", "--to", "gemini")
+        out = json.loads(run({"invocationNum": 0, "initialNumSteps": 3}))
+        self.assertIn("m2", out["injectSteps"][0]["ephemeralMessage"])
+
     def test_silent_when_not_joined_or_bad_input(self):
         huddle(self.state, "say", "hello", "--as", "x", "--to", "claude")  # claude never joined the roster
         self.assertEqual(self.run_hook("Stop"), "")

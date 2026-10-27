@@ -36,6 +36,7 @@ COMMANDS = {
     "opencode": ("opencode-huddle.md", ".opencode/command/huddle.md"),
     "antigravity": ("workflow-huddle.md", ".agent/workflows/huddle.md"),
 }
+EXTRA_FILES = {"opencode-huddle-plugin.js": ".opencode/plugins/huddle.js"}
 
 
 class Ctx:
@@ -156,6 +157,7 @@ def install_claude(ctx: Ctx) -> None:
 def install_opencode(ctx: Ctx) -> None:
     print("OpenCode:")
     install_command("opencode", ctx)
+    copy_file(SRC / "commands" / "opencode-huddle-plugin.js", ctx.project / ".opencode/plugins/huddle.js", ctx)
     cfg = ctx.project / "opencode.json"
     data, ok = read_json(cfg, ctx)
     if ok:
@@ -167,6 +169,13 @@ def install_opencode(ctx: Ctx) -> None:
 def install_antigravity(ctx: Ctx) -> None:
     print("Antigravity (Gemini):")
     install_command("antigravity", ctx)
+    hook = (ctx.project / ".huddle" / "huddle_hook.py").resolve().as_posix()
+    cmd = f'"{Path(sys.executable).as_posix()}" "{hook}" --name gemini'
+    handler = [{"type": "command", "command": cmd, "timeout": 5}]
+    hooks_file = ctx.project / ".agents" / "hooks.json"
+    data, ok = read_json(hooks_file, ctx)
+    if ok and merge_key(data, "huddle", {"PreInvocation": handler, "Stop": handler}, ctx, ".agents/hooks.json huddle"):
+        write_json(hooks_file, data, ctx, hooks_file.exists())
     script = (ctx.project / ".huddle" / "huddle_mcp.py").resolve().as_posix()
     entry = {"command": Path(sys.executable).as_posix(), "args": [script]}
     cfg = Path.home() / ".gemini" / "config" / "mcp_config.json"
@@ -185,7 +194,7 @@ def install_antigravity(ctx: Ctx) -> None:
 
 def uninstall(ctx: Ctx) -> None:
     print("Removing modelhuddle:")
-    for tool, (template, rel) in COMMANDS.items():
+    for template, rel in [*COMMANDS.values(), *EXTRA_FILES.items()]:
         p = ctx.project / rel
         if p.exists() and p.read_bytes() == (SRC / "commands" / template).read_bytes():
             ctx.say(f"delete {rel}")
@@ -228,6 +237,14 @@ def uninstall(ctx: Ctx) -> None:
                     del d["hooks"][ev]
         return changed
 
+    def edit_agy(d):
+        if "huddle" in d:
+            del d["huddle"]
+            ctx.say(".agents/hooks.json: remove huddle")
+            return True
+        return False
+
+    drop(ctx.project / ".agents" / "hooks.json", edit_agy)
     drop(ctx.project / ".mcp.json", edit_mcp)
     drop(ctx.project / "opencode.json", edit_oc)
     drop(ctx.project / ".claude" / "settings.json", edit_hooks)
