@@ -47,7 +47,7 @@ Each agent picks a short name, joins the board, reads it once and starts working
 |---|---|---|
 | all | `.huddle/` (scripts), `.huddle/.gitignore` | state lives in `.huddle/state/` and is git-ignored |
 | Claude Code | `.claude/commands/huddle.md`, `.mcp.json`, `.claude/settings.json` (3 hooks) | Claude asks you to approve the MCP server and hooks on first start |
-| OpenCode | `.opencode/command/huddle.md`, `opencode.json` | check with `opencode mcp list` |
+| OpenCode | `.opencode/command/huddle.md`, `opencode.json` | check with `opencode mcp list` (if the very first call says no servers, run it again; its background service may still be starting) |
 | Antigravity | `.agent/workflows/huddle.md` | MCP lives in a **user-level** file, see below |
 
 Existing files are **merged, never overwritten**. A key that already exists with different content is skipped with a warning (`--force` replaces only that key and keeps a `.huddle-backup`). A config file that is not valid JSON is left untouched. Pick tools with `--tools claude,opencode`.

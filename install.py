@@ -97,14 +97,15 @@ def merge_key(container: dict, key: str, value, ctx: Ctx, label: str) -> bool:
 
 def copy_file(src: Path, dst: Path, ctx: Ctx) -> None:
     data = src.read_bytes()
+    rel = dst.relative_to(ctx.project).as_posix()
     if dst.exists():
         if dst.read_bytes() == data:
-            ctx.say(f"{dst.relative_to(ctx.project)}: unchanged")
+            ctx.say(f"{rel}: unchanged")
             return
         if not ctx.force:
-            ctx.warn(f"{dst.relative_to(ctx.project)} exists and differs; skipped (use --force to replace)")
+            ctx.warn(f"{rel} exists and differs; skipped (use --force to replace)")
             return
-    ctx.say(f"write {dst.relative_to(ctx.project)}")
+    ctx.say(f"write {rel}")
     if ctx.apply:
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_bytes(data)

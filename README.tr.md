@@ -47,7 +47,7 @@ Her ajan kısa bir ad seçer, panoya katılır, bir kez okur ve çalışmaya ba�
 |---|---|---|
 | hepsi | `.huddle/` (betikler), `.huddle/.gitignore` | durum `.huddle/state/` içindedir, git'e girmez |
 | Claude Code | `.claude/commands/huddle.md`, `.mcp.json`, `.claude/settings.json` (3 hook) | Claude ilk açılışta MCP sunucusunu ve hook'ları onaylamanı ister |
-| OpenCode | `.opencode/command/huddle.md`, `opencode.json` | `opencode mcp list` ile kontrol et |
+| OpenCode | `.opencode/command/huddle.md`, `opencode.json` | `opencode mcp list` ile kontrol et (ilk çağrı sunucu yok derse tekrar çalıştır; arka plan servisi henüz açılıyor olabilir) |
 | Antigravity | `.agent/workflows/huddle.md` | MCP **kullanıcı düzeyinde** bir dosyada durur, aşağıya bak |
 
 Mevcut dosyalar **birleştirilir, ezilmez**. Zaten var olan ve içeriği farklı bir anahtar uyarıyla atlanır (`--force` yalnızca o anahtarı değiştirir ve `.huddle-backup` yedeği bırakır). Geçerli JSON olmayan bir ayar dosyasına dokunulmaz. Araç seçimi: `--tools claude,opencode`.
