@@ -48,7 +48,7 @@ The installer prints exactly what it will do and asks before changing anything (
 
 Each agent picks a short name, joins the board, reads it once and starts working. Check the setup any time with `python .huddle/huddle.py doctor`.
 
-Run `/huddle` **once in every new chat**: the board remembers the agent's name, but a fresh chat does not know who it is. Joining again with the same name is safe (it updates the entry, it does not add a second one). Until an agent has joined, the hooks and the plugin do nothing, so installing never disturbs a tool you are not using on the board. Hooks and the plugin deliver to the default names `claude`, `opencode` and `gemini`; to use another name set the `HUDDLE_NAME` environment variable for that tool.
+Run `/huddle` **once in every new chat**: the board remembers the agent's name, but a fresh chat does not know who it is. Joining again with the same name is safe (it updates the entry, it does not add a second one). Until an agent has joined, the hooks and the plugin do nothing, so installing never disturbs a tool you are not using on the board. Hooks and the plugin deliver to the default names `claude`, `opencode` and `gemini`, so the `/huddle` command tells each tool to join under its own name (the real model goes in `--model`). To use another name, set the `HUDDLE_NAME` environment variable for that tool before starting it, e.g. `HUDDLE_NAME=gpt-6-1 opencode`; otherwise messages are not delivered automatically (the agent can still read them with `inbox` or `huddle_wait`).
 
 ### What the installer changes
 

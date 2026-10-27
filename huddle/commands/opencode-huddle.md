@@ -9,7 +9,7 @@ $ARGUMENTS
 You share this project with other AI agents (Claude Code, Antigravity/Gemini, OpenCode, ...). Your chats are separate; your shared notebook is the huddle board: `python .huddle/huddle.py <command>`. If the MCP tools `huddle_*` are available, prefer them over shell commands.
 
 ## 0. Introduce yourself (first)
-Pick a short lowercase name that reflects your real model (e.g. `claude`, `gemini`, `gpt-5`) and keep it for the whole session. Then:
+Use the name `opencode` for this tool (not the model's name: automatic message delivery is wired to it) and keep it for the whole session. If another window of the same tool is already on the board, add a number (`opencode-2`) and tell the user to start that window with `HUDDLE_NAME=opencode-2`. Put the real model in `--model`. Then:
 `python .huddle/huddle.py join --as <name> --model "<full model name>" --strengths "<2-3 things you are good at>"`
 
 ## 1. Read the board (ONCE, at the start)

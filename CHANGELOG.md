@@ -3,6 +3,11 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- `/huddle` now tells each tool to join under its own fixed name (`claude`, `opencode`, `gemini`) instead of a name derived from the model. Hooks and the plugin deliver to those names, so an agent that called itself e.g. `gpt-6-1` was never woken automatically.
+
 ## [0.2.0] - 2026-10-27
 
 ### Added
