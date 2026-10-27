@@ -115,14 +115,18 @@ class BoardTests(Base):
 
     def test_concurrent_writers_lose_nothing(self):
         n, who = 25, ("a", "b", "c")
+        failures = []
 
         def writer(w):
             for k in range(n):
-                huddle(self.state, "say", f"{w}-{k}", "--as", w, "--to", "all")
+                r = huddle(self.state, "say", f"{w}-{k}", "--as", w, "--to", "all")
+                if r.returncode != 0:  # surface the real reason (e.g. lock timeout) instead of a vague "missing message"
+                    failures.append(f"{w}-{k}: exit {r.returncode}: {r.stderr.strip()[-300:]}")
 
         ts = [threading.Thread(target=writer, args=(w,)) for w in who]
         [t.start() for t in ts]
         [t.join() for t in ts]
+        self.assertEqual(failures, [], "a writer process failed")
         msgs = json.loads((self.state / "chat.json").read_text(encoding="utf-8"))
         self.assertEqual({m["text"] for m in msgs}, {f"{w}-{k}" for w in who for k in range(n)})
         ids = [m["id"] for m in msgs]
