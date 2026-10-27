@@ -28,12 +28,19 @@ State is a few JSON files. Writes are atomic and serialised with a lock file, so
 
 ## Quick start
 
+You need Python 3.10 or newer and git. Nothing else is installed.
+
 ```bash
 git clone https://github.com/coderpix/modelhuddle
 python modelhuddle/install.py /path/to/your/project
 ```
 
-The installer prints exactly what it will do and asks before changing anything (`--dry-run` only shows the plan, `--yes` skips the question). Then, in each tool, run:
+Or let your AI agent do it: open the project in Claude Code (or another agent) and ask, for example: *"Clone https://github.com/coderpix/modelhuddle outside this folder, read its README and install it into this project. Show me the `--dry-run` plan first."*
+
+The installer prints exactly what it will do and asks before changing anything (`--dry-run` only shows the plan, `--yes` skips the question). After it finishes:
+
+1. **Restart the tools** you want to use. Claude Code asks you to approve the MCP server and the hooks on first start; say yes. (OpenCode: check with `opencode mcp list`. Antigravity: see its section below.)
+2. In each tool, run once:
 
 ```
 /huddle

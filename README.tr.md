@@ -28,12 +28,19 @@ Durum birkaç JSON dosyasıdır. Yazmalar atomiktir ve kilit dosyasıyla sırala
 
 ## Hızlı başlangıç
 
+Python 3.10 veya yenisi ve git gerekir. Başka hiçbir şey kurulmaz.
+
 ```bash
 git clone https://github.com/coderpix/modelhuddle
 python modelhuddle/install.py /proje/klasorun
 ```
 
-Kurulum betiği yapacaklarını aynen gösterir ve bir şey değiştirmeden önce sorar (`--dry-run` sadece planı gösterir, `--yes` soruyu atlar). Sonra her araçta şunu çalıştır:
+Ya da bunu yapay zekâ ajanına yaptır: projeyi Claude Code'da (veya başka bir ajanda) aç ve örneğin şunu yaz: *"https://github.com/coderpix/modelhuddle reposunu bu klasörün dışına klonla, README'sini oku ve bu projeye kur. Önce `--dry-run` planını göster."*
+
+Kurulum betiği yapacaklarını aynen gösterir ve bir şey değiştirmeden önce sorar (`--dry-run` sadece planı gösterir, `--yes` soruyu atlar). Bitince:
+
+1. Kullanacağın araçları **yeniden başlat**. Claude Code ilk açılışta MCP sunucusunu ve hook'ları onaylamanı ister; onayla. (OpenCode: `opencode mcp list` ile kontrol et. Antigravity: aşağıdaki bölüme bak.)
+2. Her araçta bir kez şunu çalıştır:
 
 ```
 /huddle
