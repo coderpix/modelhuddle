@@ -78,6 +78,28 @@ class BoardTests(Base):
         self.assertEqual(huddle(self.state, "done", "1", "--as", "a", "--note", "ok").returncode, 0)
         self.assertEqual(huddle(self.state, "claim", "2", "--as", "b").returncode, 0)
 
+    def test_directory_and_glob_claims_conflict(self):
+        huddle(self.state, "add", "t1", "--files", "src/")
+        huddle(self.state, "add", "t2", "--files", "src/app/main.py")
+        huddle(self.state, "add", "t3", "--files", "docs/*.md")
+        huddle(self.state, "add", "t4", "--files", "docs/*.py")
+        huddle(self.state, "claim", "1", "--as", "a")
+        self.assertNotEqual(huddle(self.state, "claim", "2", "--as", "b").returncode, 0)
+        huddle(self.state, "claim", "3", "--as", "a")
+        self.assertEqual(huddle(self.state, "claim", "4", "--as", "b").returncode, 0)
+
+    def test_stale_claim_is_released_on_conflict(self):
+        huddle(self.state, "add", "t1", "--files", "x.py")
+        huddle(self.state, "add", "t2", "--files", "x.py")
+        huddle(self.state, "claim", "1", "--as", "a")
+        roster = self.state / "agents.json"
+        data = json.loads(roster.read_text(encoding="utf-8"))
+        data["a"]["seen"] = "2000-01-01 00:00"
+        roster.write_text(json.dumps(data), encoding="utf-8")
+        self.assertIn("stale", huddle(self.state, "status").stdout)
+        self.assertEqual(huddle(self.state, "claim", "2", "--as", "b").returncode, 0)
+        self.assertIn("todo", huddle(self.state, "status").stdout)
+
     def test_status_is_compact_by_default(self):
         huddle(self.state, "add", "open task")
         huddle(self.state, "add", "finished")

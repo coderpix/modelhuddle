@@ -12,7 +12,7 @@ Zero dependencies (Python 3.10+ standard library only). State is local and lives
 Usage (<me> = the short name you chose for yourself, e.g. claude, gemini, gpt-5):
     huddle.py join --as <me> [--model "..."] [--strengths "..."]
     huddle.py status [--all]
-    huddle.py add "<task>" [--owner <name>|any] [--files a,b]
+    huddle.py add "<task>" [--owner <name>|any] [--files a,b]   (files may be dirs or globs)
     huddle.py claim <id> --as <me>
     huddle.py done <id> --as <me> [--note "..."]
     huddle.py handoff --from <me> [--to <name>|any] --reason quota|fit|other "<summary>"
@@ -26,6 +26,7 @@ Usage (<me> = the short name you chose for yourself, e.g. claude, gemini, gpt-5)
 
 import argparse
 import contextlib
+import fnmatch
 import json
 import os
 import re
@@ -42,6 +43,7 @@ LOG = STATE / "LOG.md"
 HANDOFF = STATE / "HANDOFF.md"
 CHAT = STATE / "chat.json"
 ROSTER = STATE / "agents.json"
+STALE_MINUTES = int(os.environ.get("HUDDLE_STALE_MINUTES") or 120)
 _NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{0,30}$")
 
 
@@ -140,10 +142,74 @@ def save_roster(r: dict) -> None:
 
 
 def touch_roster(who: str) -> None:
+    """Register an unknown agent and record that it was active just now."""
     r = load_roster()
-    if who not in r:
-        r[who] = {"model": "", "strengths": "", "joined": now()}
+    entry = r.setdefault(who, {"model": "", "strengths": "", "joined": now()})
+    if entry.get("seen") != now():
+        entry["seen"] = now()
         save_roster(r)
+
+
+def minutes_since(stamp: str) -> float:
+    try:
+        return (datetime.now() - datetime.strptime(stamp, "%Y-%m-%d %H:%M")).total_seconds() / 60
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def is_stale(who: str, roster: dict) -> bool:
+    """A claim is stale when its holder has not touched the board for STALE_MINUTES."""
+    e = roster.get(who)
+    if not e or STALE_MINUTES <= 0:
+        return False
+    return minutes_since(e.get("seen") or e.get("joined")) >= STALE_MINUTES
+
+
+def _norm(p: str) -> str:
+    p = p.strip().replace("\\", "/")
+    while p.startswith("./"):
+        p = p[2:]
+    return p.rstrip("/")
+
+
+def _has_glob(p: str) -> bool:
+    return any(c in p for c in "*?[")
+
+
+def _cut(p: str, pick) -> str:
+    """Literal text before the first wildcard (head) or after the last one (tail)."""
+    idx = [i for i, c in enumerate(p) if c in "*?["]
+    return pick(p, idx)
+
+
+def paths_overlap(a: str, b: str) -> bool:
+    """True if two claim patterns (file, directory or glob) may touch the same files.
+    Deliberately conservative: when unsure, report a conflict."""
+    a, b = _norm(a), _norm(b)
+    if not a or not b:
+        return False
+    if a == b or a == "**" or b == "**":
+        return True
+    if fnmatch.fnmatchcase(a, b) or fnmatch.fnmatchcase(b, a):
+        return True
+    if not _has_glob(a) and b.startswith(a + "/"):  # a is a directory containing b
+        return True
+    if not _has_glob(b) and a.startswith(b + "/"):
+        return True
+    if _has_glob(a) and _has_glob(b):
+        ha, hb = (_cut(x, lambda p, i: p[:i[0]]) for x in (a, b))
+        ta, tb = (_cut(x, lambda p, i: p[i[-1] + 1:]) for x in (a, b))
+        heads = ha.startswith(hb) or hb.startswith(ha)
+        tails = not ta or not tb or ta.endswith(tb) or tb.endswith(ta)
+        return heads and tails
+    if _has_glob(a) or _has_glob(b):
+        g, lit = (a, b) if _has_glob(a) else (b, a)
+        return lit.startswith(_cut(g, lambda p, i: p[:i[0]]).rstrip("/") + "/") and fnmatch.fnmatchcase(lit, g)
+    return False
+
+
+def clashes(mine: list, theirs: list) -> list:
+    return sorted({f"{x} ~ {y}" if x != y else x for x in mine for y in theirs if paths_overlap(x, y)})
 
 
 def find(board: dict, tid: int) -> dict:
@@ -179,6 +245,8 @@ def cmd_status(a) -> None:
     for t in tasks:
         files = f"  files: {', '.join(t['files'])}" if t["files"] else ""
         by = f" by {t['claimed_by']}" if t.get("claimed_by") else ""
+        if t["status"] == "claimed" and is_stale(t["claimed_by"], roster):
+            by += ", stale"
         print(f"#{t['id']} [{t['status']}{by}] (owner: {t['owner']}) {t['title']}{files}")
         if full and t.get("note"):
             print(f"     note: {t['note']}")
@@ -211,19 +279,32 @@ def cmd_add(a) -> None:
     print(f"Added #{t['id']}")
 
 
+def release_if_stale(t: dict, roster: dict) -> bool:
+    if t["status"] == "claimed" and is_stale(t["claimed_by"], roster):
+        log("system", f"released stale claim on #{t['id']} (was {t['claimed_by']}, idle >= {STALE_MINUTES} min)")
+        t["status"], t["claimed_by"] = "todo", None
+        return True
+    return False
+
+
 def cmd_claim(a) -> None:
     touch_roster(a.who)
     board = load()
+    roster = load_roster()
     t = find(board, a.id)
-    if t["status"] == "claimed" and t["claimed_by"] != a.who:
-        sys.exit(f"#{t['id']} is already claimed by {t['claimed_by']}")
     if t["status"] == "done":
         sys.exit(f"#{t['id']} is already done")
+    if t["claimed_by"] != a.who:
+        release_if_stale(t, roster)
+    if t["status"] == "claimed" and t["claimed_by"] != a.who:
+        sys.exit(f"#{t['id']} is already claimed by {t['claimed_by']}")
     for other in board["tasks"]:
         if other["id"] != t["id"] and other["status"] == "claimed" and other["claimed_by"] != a.who:
-            clash = set(other["files"]) & set(t["files"])
+            clash = clashes(t["files"], other["files"])
+            if clash and release_if_stale(other, roster):
+                continue
             if clash:
-                sys.exit(f"File conflict with #{other['id']} ({other['claimed_by']}): {', '.join(sorted(clash))}")
+                sys.exit(f"File conflict with #{other['id']} ({other['claimed_by']}): {', '.join(clash)}")
     t["status"], t["claimed_by"] = "claimed", a.who
     save(board)
     log(a.who, f"claimed #{t['id']} {t['title']}")
@@ -231,6 +312,7 @@ def cmd_claim(a) -> None:
 
 
 def cmd_done(a) -> None:
+    touch_roster(a.who)
     board = load()
     t = find(board, a.id)
     t["status"], t["claimed_by"] = "done", a.who
@@ -270,6 +352,7 @@ def cmd_say(a) -> None:
 
 
 def cmd_inbox(a) -> None:
+    touch_roster(a.who)
     msgs = load_chat()
     shown = msgs if a.all else unread_for(msgs, a.who)
     if not shown:

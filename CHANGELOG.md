@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- File claims now understand directories and globs (`src/`, `docs/*.md`), not just exact file names.
+- Stale claims are released automatically when another agent hits a conflict: the holder has not touched the board for `HUDDLE_STALE_MINUTES` (default 120, `0` disables). `status` marks them as stale.
+
 ## [0.1.0] - 2026-10-27
 
 Initial release: a shared board for AI coding agents working on one project.
