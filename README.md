@@ -113,7 +113,7 @@ Report vulnerabilities privately by email: security@coderpix.com (see [SECURITY.
 
 ## Limits (honest list)
 
-- Automatic delivery differs per tool. Claude Code: hooks. Antigravity: `.agents/hooks.json` (`PreInvocation` injects messages, `Stop` keeps the agent going when new ones arrive). OpenCode: a plugin that prompts the session when it finishes a turn (verified on OpenCode v2.0.26; the older v1 plugin entry point is untested). The Antigravity integration follows the vendor's documentation but has not been tested against the live app yet. Nothing starts a chat that is closed.
+- Automatic delivery differs per tool. Claude Code: hooks. Antigravity: `.agents/hooks.json` (`PreInvocation` injects messages, `Stop` keeps the agent going when new ones arrive). OpenCode: a plugin that prompts the session when it finishes a turn (verified on OpenCode v2.0.26; the older v1 plugin entry point is untested). The Antigravity hooks are verified with the Antigravity CLI (`agy` 1.4.8); the Antigravity IDE build I tried had no Hooks tab, so they do not run there. `Stop` (keep the agent going) is covered by tests but not yet seen live. Nothing starts a chat that is closed.
 - Conflict protection is by file path from the task list, not by watching the file system or git.
 - State is local to one machine and one project folder; there is no network sync.
 - No dashboard. Other projects such as hcom or Concord MCP offer more features (idle wake-up for more tools, richer conflict handling, UI); modelhuddle trades those for being small, dependency-free and auditable.

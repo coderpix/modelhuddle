@@ -113,7 +113,7 @@ Güvenlik açıklarını özel olarak e-postayla bildir: security@coderpix.com (
 
 ## Sınırlar (dürüst liste)
 
-- Otomatik teslim araca göre değişir. Claude Code: hook'lar. Antigravity: `.agents/hooks.json` (`PreInvocation` mesajları ekler, `Stop` yeni mesaj geldiğinde ajanı çalışmaya devam ettirir). OpenCode: oturum bir turu bitirince oturuma istek gönderen bir eklenti (OpenCode v2.0.26'da doğrulandı; eski v1 giriş noktası denenmedi). Antigravity entegrasyonu üreticinin belgesine göre yazıldı ama henüz gerçek uygulamada denenmedi. Kapalı bir sohbeti başlatan bir şey yok.
+- Otomatik teslim araca göre değişir. Claude Code: hook'lar. Antigravity: `.agents/hooks.json` (`PreInvocation` mesajları ekler, `Stop` yeni mesaj geldiğinde ajanı çalışmaya devam ettirir). OpenCode: oturum bir turu bitirince oturuma istek gönderen bir eklenti (OpenCode v2.0.26'da doğrulandı; eski v1 giriş noktası denenmedi). Antigravity hook'ları Antigravity CLI'da (`agy` 1.4.8) doğrulandı; denediğim Antigravity IDE sürümünde Hooks sekmesi yoktu, orada çalışmıyorlar. `Stop` (ajanı çalışır tutma) testlerle kapsanıyor ama canlı görülmedi. Kapalı bir sohbeti başlatan bir şey yok.
 - Çakışma koruması, görev listesindeki dosya yollarına göre yapılır; dosya sistemini veya git'i izlemez.
 - Durum tek makineye ve tek proje klasörüne özeldir; ağ üzerinden senkronizasyon yok.
 - Panel yok. hcom veya Concord MCP gibi projeler daha fazla özellik sunar (daha çok araçta boşta uyandırma, daha zengin çakışma yönetimi, arayüz); modelhuddle bunların yerine küçük, bağımlılıksız ve denetlenebilir olmayı seçer.

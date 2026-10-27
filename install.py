@@ -169,8 +169,9 @@ def install_opencode(ctx: Ctx) -> None:
 def install_antigravity(ctx: Ctx) -> None:
     print("Antigravity (Gemini):")
     install_command("antigravity", ctx)
-    hook = (ctx.project / ".huddle" / "huddle_hook.py").resolve().as_posix()
-    cmd = f'"{Path(sys.executable).as_posix()}" "{hook}" --name gemini'
+    # Antigravity runs hooks from the .agents folder and does not understand quoted paths, so use a
+    # relative, quote-free command (this also keeps the file valid when the project moves).
+    cmd = "python ../.huddle/huddle_hook.py --name gemini"
     handler = [{"type": "command", "command": cmd, "timeout": 5}]
     hooks_file = ctx.project / ".agents" / "hooks.json"
     data, ok = read_json(hooks_file, ctx)
