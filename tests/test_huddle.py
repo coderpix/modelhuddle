@@ -196,6 +196,33 @@ class McpTests(Base):
         finally:
             c.close()
 
+    def test_wait_marks_waiting_then_working(self):
+        huddle(self.state, "join", "--as", "a")
+        c = McpClient(self.state)
+        try:
+            t = threading.Timer(1.0, lambda: huddle(self.state, "say", "ping", "--as", "b", "--to", "a"))
+            seen = []
+
+            def watch():
+                for _ in range(40):
+                    f = self.state / "agents.json"
+                    if f.exists():
+                        seen.append(json.loads(f.read_text(encoding="utf-8"))["a"].get("state"))
+                    time.sleep(0.05)
+
+            w = threading.Thread(target=watch)
+            w.start()
+            t.start()
+            err, text = c.tool("huddle_wait", **{"as": "a", "timeout_seconds": 20})
+            w.join()
+            t.join()
+            self.assertFalse(err)
+            self.assertIn("ping", text)
+            self.assertIn("waiting", seen)
+            self.assertEqual(json.loads((self.state / "agents.json").read_text(encoding="utf-8"))["a"]["state"], "working")
+        finally:
+            c.close()
+
     def test_flag_injection_is_treated_as_text(self):
         c = McpClient(self.state)
         try:
@@ -278,6 +305,14 @@ class HookTests(Base):
         huddle(self.state, "say", "m2", "--as", "claude", "--to", "gemini")
         out = json.loads(run({"invocationNum": 0, "initialNumSteps": 3}))
         self.assertIn("m2", out["injectSteps"][0]["ephemeralMessage"])
+
+    def test_huddle_name_env_beats_the_fixed_name(self):
+        huddle(self.state, "join", "--as", "gemini-2")
+        huddle(self.state, "say", "for window two", "--as", "claude", "--to", "gemini-2")
+        e = {**env_for(self.state), "HUDDLE_NAME": "gemini-2"}
+        r = subprocess.run([PY, str(SRC / "huddle_hook.py"), "--name", "gemini"], input=json.dumps({"invocationNum": 0}),
+                           env=e, capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertIn("for window two", r.stdout)
 
     def test_silent_when_not_joined_or_bad_input(self):
         huddle(self.state, "say", "hello", "--as", "x", "--to", "claude")  # claude never joined the roster
@@ -453,6 +488,24 @@ class InstallerTests(Base):
         (proj / ".mcp.json").write_text("{ not json", encoding="utf-8")
         self.assertEqual(self.install(proj).returncode, 0)
         self.assertEqual((proj / ".mcp.json").read_text(encoding="utf-8"), "{ not json")
+
+    def test_config_with_a_bom_is_merged_not_skipped(self):
+        proj = self.tmp / "proj"
+        proj.mkdir()
+        (proj / ".mcp.json").write_bytes(b"\xef\xbb\xbf" + json.dumps({"mcpServers": {"other": {"command": "x"}}}).encode("utf-8"))
+        self.assertEqual(self.install(proj).returncode, 0)
+        servers = json.loads((proj / ".mcp.json").read_text(encoding="utf-8-sig"))["mcpServers"]
+        self.assertEqual(set(servers), {"other", "huddle"})
+
+    def test_doctor_checks_all_three_tools(self):
+        proj = self.tmp / "proj"
+        proj.mkdir()
+        self.install(proj, "--tools", "antigravity")
+        out = subprocess.run([PY, str(proj / ".huddle" / "huddle.py"), "doctor"], env=env_for(self.state), capture_output=True,
+                             text=True, encoding="utf-8", timeout=60).stdout
+        self.assertIn("[ok]   .agents/hooks.json: configured", out)
+        self.assertIn("[ok]   .agent/workflows/huddle.md: configured", out)
+        self.assertIn("[--]   .mcp.json: not configured", out)
 
     def test_nothing_outside_the_project_is_written(self):
         proj = self.tmp / "proj"

@@ -31,6 +31,7 @@ import fnmatch
 import json
 import os
 import re
+import shutil
 import sys
 import time
 from datetime import datetime
@@ -442,13 +443,21 @@ def cmd_doctor(_a) -> None:
         line(True, f"state dir writable: {STATE}")
     except OSError as e:
         line(False, f"state dir not writable: {e}")
-    for rel, key in ((".mcp.json", "huddle"), ("opencode.json", "huddle"), (".claude/settings.json", "huddle_hook")):
+    checks = (
+        (".mcp.json", "huddle"), ("opencode.json", "huddle"), (".claude/settings.json", "huddle_hook"),
+        (".opencode/plugins/huddle.js", "HuddlePlugin"),
+        (".agents/hooks.json", "huddle_hook"), (".agents/mcp_config.json", "huddle"),
+        (".agent/workflows/huddle.md", "huddle"),
+    )
+    for rel, key in checks:
         p = root / rel
         try:
             has = p.exists() and key in p.read_text(encoding="utf-8")
         except OSError:
             has = False
         print(("[ok]   " if has else "[--]   ") + f"{rel}: {'configured' if has else 'not configured (optional)'}")
+    if shutil.which("python") is None:  # the generated hooks, MCP entries and the plugin call plain `python`
+        print("[--]   `python` is not on PATH: the hooks, the MCP entries and the plugin call it by that name")
     roster = load_roster()
     print(f"[info] team: {', '.join(roster) if roster else '(nobody joined yet)'}")
     print("[ok]   all required checks passed" if ok else "[FAIL] some checks failed")

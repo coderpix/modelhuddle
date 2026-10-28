@@ -89,6 +89,15 @@ def me(a: dict, key: str = "as") -> str:
     return arg(a, key)
 
 
+def mark(who: str, state: str) -> None:
+    """Presence for the dashboard; bookkeeping must never break a tool call."""
+    try:
+        with huddle.locked(timeout=2):
+            huddle.set_presence(who, state)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def call(tool: str, a: dict) -> tuple:
     if tool == "huddle_join":
         return run_huddle(["join", "--as", me(a), "--model", arg(a, "model"), "--strengths", arg(a, "strengths")])
@@ -123,9 +132,11 @@ def call(tool: str, a: dict) -> tuple:
         who = huddle.name(me(a))
         limit = max(1, min(int(a.get("timeout_seconds") or 60), MAX_WAIT))
         end = time.time() + limit
+        mark(who, "waiting")
         while time.time() < end:
             try:
                 if huddle.unread_for(huddle.load_chat(), who):
+                    mark(who, "working")  # the message wakes the agent
                     ok, text = run_huddle(["inbox", "--as", who])
                     return ok, NOTE + text
             except (OSError, ValueError):

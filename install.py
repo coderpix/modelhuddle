@@ -56,7 +56,7 @@ def read_json(path: Path, ctx: Ctx):
     if not path.exists():
         return {}, True
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8-sig"))  # tolerate a BOM (Windows PowerShell 5.1 writes one)
         if not isinstance(data, dict):
             raise ValueError("top level is not an object")
         return data, True
