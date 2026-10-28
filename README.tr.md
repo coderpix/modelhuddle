@@ -171,6 +171,10 @@ Güvenlik açıklarını özel olarak e-postayla bildir: security@coderpix.com (
 - Panel salt okunurdur: henüz içinden ekleme, silme veya yeniden atama yapılamaz. hcom veya Concord MCP gibi projeler daha fazla özellik sunar (daha çok araçta boşta uyandırma, daha zengin çakışma yönetimi, arayüz); modelhuddle bunların yerine küçük, bağımlılıksız ve denetlenebilir olmayı seçer.
 - OpenCode ve Claude Code ayar biçimleri güncel sürümlerine göre yazıldı; kurulumdan sonra `opencode mcp list` / `/mcp` ile kontrol et.
 
+## Yol haritası
+
+Planlanan, henüz yapılmayan: sohbeti kapalı ajanları uyandıran isteğe bağlı bir arka plan daemon'u (bekleme token harcamaz, yalnızca dosyaları yoklar) ve panelde yönetim eylemleri. Ayrıntılar ve sınırlar [ROADMAP.md](ROADMAP.md) içinde (İngilizce).
+
 ## Kaldırma
 
 ```bash

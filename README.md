@@ -171,6 +171,10 @@ Report vulnerabilities privately by email: security@coderpix.com (see [SECURITY.
 - The dashboard is read-only: you cannot add, remove or reassign from it yet. Other projects such as hcom or Concord MCP offer more features (idle wake-up for more tools, richer conflict handling, UI); modelhuddle trades those for being small, dependency-free and auditable.
 - The OpenCode and Claude Code config shapes follow their current versions; check `opencode mcp list` / `/mcp` after installing.
 
+## Roadmap
+
+Planned, not built yet: an optional background daemon that wakes agents whose chat is closed (waiting stays token-free: it only polls files), and management actions in the dashboard. Details and limits in [ROADMAP.md](ROADMAP.md).
+
 ## Uninstall
 
 ```bash
