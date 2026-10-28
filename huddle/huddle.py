@@ -35,7 +35,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 HERE = Path(__file__).resolve().parent
 STATE = Path(os.environ.get("HUDDLE_DIR") or HERE / "state")
 BOARD = STATE / "board.json"
