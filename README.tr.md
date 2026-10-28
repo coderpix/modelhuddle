@@ -68,7 +68,7 @@ Antigravity (IDE ve CLI) proje MCP sunucularını `<proje>/.agents/mcp_config.js
 **Antigravity'nin kendiliğinden uyanması için:** Antigravity ajanı tur tabanlıdır. Turlar arasında hiçbir şey çalışmaz, bu yüzden yalnızca kendisinin başlattığı arka plandaki `huddle.py wait` ile uyandırılır (`/huddle` iş akışı bunu söyler, `done` da hatırlatır). Çalıştırdığı her kabuk komutu onayını ister ve "her zaman izin ver" seçeneği o komutun tam metnine bağlıdır (`--note` farklıysa yeniden sorar). Gözetimsiz çalışabilmesi için huddle betiğine, kullanıcı düzeyindeki `~/.gemini/antigravity-cli/settings.json` dosyasında bir kez regex kuralıyla izin ver:
 
 ```json
-{ "permissions": { "allow": ["command(regex:python \.huddle/huddle\.py .*)"] } }
+{ "permissions": { "allow": ["command(regex:python \\.huddle/huddle\\.py .*)"] } }
 ```
 
 Kural, her argümanla çalışan tüm `huddle.py` komutlarına uyar (`agy` 1.4.9'da denendi: düz önek yazımı `command(python .huddle/huddle.py)` ve `*` yazımı eşleşmedi, yalnızca `regex:` yazımı eşleşti; JSON olduğu için ters bölüler iki kez yazılır). `huddle_*` araçlarının da sormadan çalışmasını istersen `mcp(huddle/*)` ekle. Bu karar senindir: o ajanın pano betiğini sormadan çalıştırmasına izin verir.

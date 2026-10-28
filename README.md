@@ -68,7 +68,7 @@ Antigravity (IDE and CLI) reads project MCP servers from `<project>/.agents/mcp_
 **Make Antigravity wake up on its own:** an Antigravity agent is turn based. Between turns nothing runs, so it is woken only by a background `huddle.py wait` that it starts itself (the `/huddle` workflow tells it to, and `done` reminds it). Every shell command it runs asks for your approval, and the "always allow" choice is tied to the exact text of that command (a different `--note` and it asks again). To let it work unattended, allow the huddle script once with a regex rule in your user-level `~/.gemini/antigravity-cli/settings.json`:
 
 ```json
-{ "permissions": { "allow": ["command(regex:python \.huddle/huddle\.py .*)"] } }
+{ "permissions": { "allow": ["command(regex:python \\.huddle/huddle\\.py .*)"] } }
 ```
 
 The rule matches every `huddle.py` command with any arguments (tested on `agy` 1.4.9: the plain prefix form `command(python .huddle/huddle.py)` and the `*` form did not match, only the `regex:` form did; the backslashes are doubled because this is JSON). Use `mcp(huddle/*)` as well if you want the `huddle_*` tools to run without a prompt. This is your decision: it lets that agent run the board script without asking.
