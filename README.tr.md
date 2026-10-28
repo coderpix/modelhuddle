@@ -65,13 +65,13 @@ Mevcut dosyalar **birleştirilir, ezilmez**. Zaten var olan ve içeriği farklı
 
 Antigravity (IDE ve CLI) proje MCP sunucularını `<proje>/.agents/mcp_config.json` dosyasından okur; kurulum `huddle` girdisini oraya yazar ve projenin dışında hiçbir şeye dokunmaz. Antigravity'yi yeniden başlat ve **yeni** bir sohbet aç, çünkü araç listesi sohbet başında oluşur: `huddle` 9 araçla listelenmeli (IDE: **Manage MCPs**; CLI: `agy mcp list` yalnızca kullanıcı düzeyindeki sunucuları gösterir, bunun yerine ajandan `huddle_*` araçlarını saymasını iste). Ajan bir MCP aracını ilk çağırışında izin isteyebilir. MCP olmadan da ajan kabuk komutlarıyla çalışır.
 
-**Antigravity'nin kendiliğinden uyanması için:** Antigravity ajanı tur tabanlıdır. Turlar arasında hiçbir şey çalışmaz, bu yüzden yalnızca kendisinin başlattığı arka plandaki `huddle.py wait` ile uyandırılır (`/huddle` iş akışı bunu söyler, `done` da hatırlatır). Çalıştırdığı her kabuk komutu onayını ister ve "her zaman izin ver" seçeneği o komutun tam metnine bağlıdır (`--note` farklıysa yeniden sorar). Gözetimsiz çalışabilmesi için huddle betiğine, kullanıcı düzeyindeki `~/.gemini/antigravity-cli/settings.json` dosyasında bir kez önek kuralıyla izin ver:
+**Antigravity'nin kendiliğinden uyanması için:** Antigravity ajanı tur tabanlıdır. Turlar arasında hiçbir şey çalışmaz, bu yüzden yalnızca kendisinin başlattığı arka plandaki `huddle.py wait` ile uyandırılır (`/huddle` iş akışı bunu söyler, `done` da hatırlatır). Çalıştırdığı her kabuk komutu onayını ister ve "her zaman izin ver" seçeneği o komutun tam metnine bağlıdır (`--note` farklıysa yeniden sorar). Gözetimsiz çalışabilmesi için huddle betiğine, kullanıcı düzeyindeki `~/.gemini/antigravity-cli/settings.json` dosyasında bir kez regex kuralıyla izin ver:
 
 ```json
-{ "permissions": { "allow": ["command(python .huddle/huddle.py)"] } }
+{ "permissions": { "allow": ["command(regex:python \.huddle/huddle\.py .*)"] } }
 ```
 
-Önek kuralı, her argümanla çalışan tüm `huddle.py` komutlarına uyar. `huddle_*` araçlarının da sormadan çalışmasını istersen `mcp(huddle/*)` ekle. Bu karar senindir: o ajanın pano betiğini sormadan çalıştırmasına izin verir.
+Kural, her argümanla çalışan tüm `huddle.py` komutlarına uyar (`agy` 1.4.9'da denendi: düz önek yazımı `command(python .huddle/huddle.py)` ve `*` yazımı eşleşmedi, yalnızca `regex:` yazımı eşleşti; JSON olduğu için ters bölüler iki kez yazılır). `huddle_*` araçlarının da sormadan çalışmasını istersen `mcp(huddle/*)` ekle. Bu karar senindir: o ajanın pano betiğini sormadan çalıştırmasına izin verir.
 
 > **Başka araçların eski MCP sunucuları:** kullanıcı düzeyindeki `~/.gemini/config/mcp_config.json` her proje için geçerlidir. İçinde başka bir kitin sunucusu varsa (örneğin eski bir `duo` sunucusu), ajan o araçları çağırıp bu projenin değil o kitin panosuyla konuşabilir. Ona `huddle_*` araçlarını veya yalnızca kabuk komutlarını (`python .huddle/huddle.py ...`) kullanmasını söyle, ya da eski sunucuyu kapat (`agy mcp disable <ad>`).
 

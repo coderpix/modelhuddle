@@ -65,13 +65,13 @@ Existing files are **merged, never overwritten**. A key that already exists with
 
 Antigravity (IDE and CLI) reads project MCP servers from `<project>/.agents/mcp_config.json`, so the installer writes the `huddle` entry there and nothing outside your project is touched. Restart Antigravity and start a **new** chat, since the tool list is built when a chat starts: `huddle` should list 9 tools (IDE: **Manage MCPs**; CLI: `agy mcp list` shows only your user-level servers, ask the agent to list its `huddle_*` tools instead). The agent may ask permission the first time it calls an MCP tool. Without MCP the agent still works through the shell commands.
 
-**Make Antigravity wake up on its own:** an Antigravity agent is turn based. Between turns nothing runs, so it is woken only by a background `huddle.py wait` that it starts itself (the `/huddle` workflow tells it to, and `done` reminds it). Every shell command it runs asks for your approval, and the "always allow" choice is tied to the exact text of that command (a different `--note` and it asks again). To let it work unattended, allow the huddle script once as a prefix rule in your user-level `~/.gemini/antigravity-cli/settings.json`:
+**Make Antigravity wake up on its own:** an Antigravity agent is turn based. Between turns nothing runs, so it is woken only by a background `huddle.py wait` that it starts itself (the `/huddle` workflow tells it to, and `done` reminds it). Every shell command it runs asks for your approval, and the "always allow" choice is tied to the exact text of that command (a different `--note` and it asks again). To let it work unattended, allow the huddle script once with a regex rule in your user-level `~/.gemini/antigravity-cli/settings.json`:
 
 ```json
-{ "permissions": { "allow": ["command(python .huddle/huddle.py)"] } }
+{ "permissions": { "allow": ["command(regex:python \.huddle/huddle\.py .*)"] } }
 ```
 
-A prefix rule matches every `huddle.py` command with any arguments. Use `mcp(huddle/*)` as well if you want the `huddle_*` tools to run without a prompt. This is your decision: it lets that agent run the board script without asking.
+The rule matches every `huddle.py` command with any arguments (tested on `agy` 1.4.9: the plain prefix form `command(python .huddle/huddle.py)` and the `*` form did not match, only the `regex:` form did; the backslashes are doubled because this is JSON). Use `mcp(huddle/*)` as well if you want the `huddle_*` tools to run without a prompt. This is your decision: it lets that agent run the board script without asking.
 
 > **Old MCP servers of other tools:** a user-level `~/.gemini/config/mcp_config.json` applies to every project. If it contains another kit's server (for example an older `duo` server), the agent may call those tools and talk to that kit's board instead of this project's. Tell it to use the `huddle_*` tools or only shell commands (`python .huddle/huddle.py ...`), or disable the old server (`agy mcp disable <name>`).
 
