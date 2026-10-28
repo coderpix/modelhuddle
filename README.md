@@ -192,7 +192,7 @@ python .huddle/huddle.py done 1 --as gemini --note "toggle works"
 - Nothing outside the project folder is ever written (the old `--user-config` flag is ignored).
 - Tested: concurrent writers lose nothing, a failed write does not truncate state, non-ASCII text survives Windows consoles.
 
-Report vulnerabilities privately by email: security@coderpix.com (see [SECURITY.md](SECURITY.md)).
+Report vulnerabilities privately by email: info@coderpix.com (see [SECURITY.md](SECURITY.md)).
 
 ## Limits (honest list)
 

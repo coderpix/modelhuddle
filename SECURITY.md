@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report security issues privately by email to **security@coderpix.com**. Do not open a public issue with exploit details. Include what you found, how to reproduce it, and the version (`python .huddle/huddle.py --version`).
+Please report security issues privately by email to **info@coderpix.com**. Do not open a public issue with exploit details. Include what you found, how to reproduce it, and the version (`python .huddle/huddle.py --version`).
 
 ## What the tool does and does not do
 

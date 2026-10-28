@@ -192,7 +192,7 @@ python .huddle/huddle.py done 1 --as gemini --note "düğme çalışıyor"
 - Proje klasörünün dışına hiçbir şey yazılmaz (eski `--user-config` bayrağı yok sayılır).
 - Test edildi: eşzamanlı yazanlar hiçbir şey kaybetmez, başarısız yazma durumu bozmaz, ASCII dışı metin Windows konsollarında bozulmaz.
 
-Güvenlik açıklarını özel olarak e-postayla bildir: security@coderpix.com (bkz. [SECURITY.md](SECURITY.md)).
+Güvenlik açıklarını özel olarak e-postayla bildir: info@coderpix.com (bkz. [SECURITY.md](SECURITY.md)).
 
 ## Sınırlar (dürüst liste)
 
