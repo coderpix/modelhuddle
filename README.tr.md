@@ -65,6 +65,14 @@ Mevcut dosyalar **birleştirilir, ezilmez**. Zaten var olan ve içeriği farklı
 
 Antigravity (IDE ve CLI) proje MCP sunucularını `<proje>/.agents/mcp_config.json` dosyasından okur; kurulum `huddle` girdisini oraya yazar ve projenin dışında hiçbir şeye dokunmaz. Antigravity'yi yeniden başlat ve **yeni** bir sohbet aç, çünkü araç listesi sohbet başında oluşur: `huddle` 9 araçla listelenmeli (IDE: **Manage MCPs**; CLI: `agy mcp list` yalnızca kullanıcı düzeyindeki sunucuları gösterir, bunun yerine ajandan `huddle_*` araçlarını saymasını iste). Ajan bir MCP aracını ilk çağırışında izin isteyebilir. MCP olmadan da ajan kabuk komutlarıyla çalışır.
 
+**Antigravity'nin kendiliğinden uyanması için:** Antigravity ajanı tur tabanlıdır. Turlar arasında hiçbir şey çalışmaz, bu yüzden yalnızca kendisinin başlattığı arka plandaki `huddle.py wait` ile uyandırılır (`/huddle` iş akışı bunu söyler, `done` da hatırlatır). Çalıştırdığı her kabuk komutu onayını ister ve "her zaman izin ver" seçeneği o komutun tam metnine bağlıdır (`--note` farklıysa yeniden sorar). Gözetimsiz çalışabilmesi için huddle betiğine, kullanıcı düzeyindeki `~/.gemini/antigravity-cli/settings.json` dosyasında bir kez önek kuralıyla izin ver:
+
+```json
+{ "permissions": { "allow": ["command(python .huddle/huddle.py)"] } }
+```
+
+Önek kuralı, her argümanla çalışan tüm `huddle.py` komutlarına uyar. `huddle_*` araçlarının da sormadan çalışmasını istersen `mcp(huddle/*)` ekle. Bu karar senindir: o ajanın pano betiğini sormadan çalıştırmasına izin verir.
+
 > **Başka araçların eski MCP sunucuları:** kullanıcı düzeyindeki `~/.gemini/config/mcp_config.json` her proje için geçerlidir. İçinde başka bir kitin sunucusu varsa (örneğin eski bir `duo` sunucusu), ajan o araçları çağırıp bu projenin değil o kitin panosuyla konuşabilir. Ona `huddle_*` araçlarını veya yalnızca kabuk komutlarını (`python .huddle/huddle.py ...`) kullanmasını söyle, ya da eski sunucuyu kapat (`agy mcp disable <ad>`).
 
 Hook'lar da projede (`.agents/hooks.json`) durur ve Antigravity CLI'da (`agy`) çalışır. Antigravity onları `.agents` klasöründen çalıştırır ve tırnaklı yolları anlamaz, bu yüzden kurulum `python ../.huddle/huddle_hook.py --name gemini` yazar; `python` senin `PATH`'inde olmalı.
@@ -84,7 +92,7 @@ Diğer araçların pencerelerini açık tut: uyandırılan ajanın çalışan bi
 |---|---|---|
 | Claude Code | hook'lar (araç çağrısından sonra, tur başında ve tur bitince) | yalnızca bekliyorsa (`huddle_wait` / arka planda `huddle.py wait`); boştayken hook çalışmaz |
 | OpenCode (v2) | eklenti: tur bitince ve sonra her 5 sn'de (`HUDDLE_POLL_SECONDS`, `0` = yalnızca tur sonu) bir dosyayı okuyarak gelen kutusuna bakar | evet, saniyeler içinde (v2.0.26 ve v2.2.0'da doğrulandı) |
-| Antigravity CLI (`agy`) | `.agents/hooks.json`: `PreInvocation` okunmamış mesajları ekler | çalışırken veya beklerken; `Stop` ajanı çalışır tutar ama canlı görülmedi |
+| Antigravity CLI (`agy`) | `.agents/hooks.json`: `PreInvocation` okunmamış mesajları ekler; ajanın başlattığı arka plandaki `huddle.py wait` onu uyandırır | o `wait` çalışırken evet (doğrulandı); ajan her görevden sonra onu yeniden başlatmalı ve varsayılan izinlerle her çalıştırma onay ister, Antigravity bölümüne bak |
 | Antigravity IDE | yok (denediğim sürümde Hooks sekmesi yok) | hayır; ajan gelen kutusunu kendisi okur |
 
 Kapalı bir sohbeti başlatan bir şey yok.

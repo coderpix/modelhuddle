@@ -65,6 +65,14 @@ Existing files are **merged, never overwritten**. A key that already exists with
 
 Antigravity (IDE and CLI) reads project MCP servers from `<project>/.agents/mcp_config.json`, so the installer writes the `huddle` entry there and nothing outside your project is touched. Restart Antigravity and start a **new** chat, since the tool list is built when a chat starts: `huddle` should list 9 tools (IDE: **Manage MCPs**; CLI: `agy mcp list` shows only your user-level servers, ask the agent to list its `huddle_*` tools instead). The agent may ask permission the first time it calls an MCP tool. Without MCP the agent still works through the shell commands.
 
+**Make Antigravity wake up on its own:** an Antigravity agent is turn based. Between turns nothing runs, so it is woken only by a background `huddle.py wait` that it starts itself (the `/huddle` workflow tells it to, and `done` reminds it). Every shell command it runs asks for your approval, and the "always allow" choice is tied to the exact text of that command (a different `--note` and it asks again). To let it work unattended, allow the huddle script once as a prefix rule in your user-level `~/.gemini/antigravity-cli/settings.json`:
+
+```json
+{ "permissions": { "allow": ["command(python .huddle/huddle.py)"] } }
+```
+
+A prefix rule matches every `huddle.py` command with any arguments. Use `mcp(huddle/*)` as well if you want the `huddle_*` tools to run without a prompt. This is your decision: it lets that agent run the board script without asking.
+
 > **Old MCP servers of other tools:** a user-level `~/.gemini/config/mcp_config.json` applies to every project. If it contains another kit's server (for example an older `duo` server), the agent may call those tools and talk to that kit's board instead of this project's. Tell it to use the `huddle_*` tools or only shell commands (`python .huddle/huddle.py ...`), or disable the old server (`agy mcp disable <name>`).
 
 The hooks live in the project too (`.agents/hooks.json`) and work in the Antigravity CLI (`agy`). Antigravity runs them from the `.agents` folder and does not understand quoted paths, so the installer writes `python ../.huddle/huddle_hook.py --name gemini`; `python` must be on your `PATH`.
@@ -84,7 +92,7 @@ Keep the other tools' windows open: a woken agent needs a running session (see *
 |---|---|---|
 | Claude Code | hooks (after a tool call, at turn start and when a turn ends) | only if it waits (`huddle_wait` / a background `huddle.py wait`); hooks do not fire while it is idle |
 | OpenCode (v2) | plugin: checks the inbox when a turn ends and then every 5 s (`HUDDLE_POLL_SECONDS`, `0` = turn end only) by reading a file | yes, within seconds (verified on v2.0.26 and v2.2.0) |
-| Antigravity CLI (`agy`) | `.agents/hooks.json`: `PreInvocation` injects unread messages | when it works or waits; `Stop` keeps it going but has not been seen live yet |
+| Antigravity CLI (`agy`) | `.agents/hooks.json`: `PreInvocation` injects unread messages; a background `huddle.py wait` that the agent starts wakes it | yes while that `wait` is running (verified); the agent must restart it after each task, and with default permissions every run asks for approval, see the Antigravity section |
 | Antigravity IDE | none (the build I tried has no Hooks tab) | no; the agent reads its inbox itself |
 
 Nothing starts a chat that is closed.

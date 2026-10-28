@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- `done` now reminds the agent to restart the background `wait` when its tool has no automatic wake-up (an Antigravity agent did not restart it after a task and was no longer woken). README explains the Antigravity permission rule that makes this unattended.
 - Antigravity MCP is now configured per project in `.agents/mcp_config.json` (read by the IDE and the CLI) instead of the user-level `~/.gemini/config/mcp_config.json`. The installer no longer writes anything outside the project; `--user-config` is accepted and ignored. This removes the single-fixed-path problem (one user-level entry pointed at one project's board).
 
 ### Fixed

@@ -321,6 +321,8 @@ def cmd_done(a) -> None:
     save(board)
     log(a.who, f"done #{t['id']} {t['title']}" + (f" - {a.note}" if a.note else ""))
     print(f"#{t['id']} done")
+    print(f"If your tool has no automatic wake-up (e.g. Antigravity), start `python .huddle/huddle.py wait --as {a.who}` "
+          "in the background now, so the next message wakes you.")
 
 
 def cmd_handoff(a) -> None:
