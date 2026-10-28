@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] - 2026-10-28
 
 ### Added
 - `huddle.py ui [--port N] [--open]`: read-only dashboard (team with working / idle / waiting, tasks and claims, messages, log, handoff, setup guide). Loopback only, GET only, `Host` check, strict CSP, everything rendered with `textContent`.
