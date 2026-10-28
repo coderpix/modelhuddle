@@ -41,7 +41,7 @@ The dashboard is read-only today. Next:
 
 - Antigravity IDE: hooks do not exist in the IDE build tested (2.5.5); re-test when they do. The `Stop` hook is covered by tests but has not been seen live.
 - OpenCode v1 plugin entry point is untested.
-- A `doctor` check that `python` is on the `PATH` of the tools (Antigravity hooks and MCP call plain `python`).
+- macOS and Linux without a `python` command: the generated hooks, MCP entries and the plugin call plain `python`. Let the installer write the interpreter that ran it (or detect `python3`). `doctor` already warns.
 - Warn on `join` when the name is already in use by a recently active agent.
 
 Suggestions are welcome as issues.

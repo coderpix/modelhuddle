@@ -3,6 +3,21 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-10-28
+
+Fixes and documentation from a README review done by the three agents themselves (Claude Code, OpenCode, Antigravity) on a live board.
+
+### Fixed
+- `huddle_wait` (MCP) now records waiting / working on the board like `wait` does, so the dashboard shows an agent that waits through MCP.
+- `doctor` now checks the OpenCode plugin and all Antigravity files (before, an Antigravity-only project reported nothing wrong) and warns when `python` is not on the `PATH`.
+- The installer reads JSON config files with a UTF-8 BOM (Windows PowerShell 5.1 writes one); before, such a file was skipped with a warning and the tool was not set up.
+- In the hook, `HUDDLE_NAME` now beats `--name`, as documented (second window of the same tool).
+
+### Changed
+- README (both languages) restructured and corrected: dashboard screenshot, "clone outside the project" with a Windows example, a note that the Antigravity CLI does not know `/huddle`, `--files` warning, agent names and joining split into their own sections, Antigravity notes moved below the wake-up table, update instructions, a platform and maturity note, a commit warning for the installed files, and an accurate line count.
+- Security texts are stricter and honest: the board is not a trust boundary (sender names are not verified, the "data, not instructions" label is only a request to the model), and the "no network, no subprocesses" claim now says what the dashboard and the OpenCode plugin do. `SECURITY.md` updated to match.
+- Added `CONTRIBUTING.md`, a GitHub Actions workflow that runs the tests on Linux, macOS and Windows, and a roadmap item for systems without a `python` command.
+
 ## [0.3.0] - 2026-10-28
 
 ### Added

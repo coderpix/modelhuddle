@@ -4,23 +4,28 @@
 
 [Türkçe](README.tr.md)
 
+![The dashboard: who is doing what](docs/dashboard.png)
+
+> **Status: 0.x.** It works and is tested, but the interface may still change. Most of the live testing was done on Windows (see [Limits](#limits-honest-list)).
+
 ## Why
 
 Each AI tool runs in its own chat. They cannot see each other, so you end up copy-pasting context between them and they edit the same files. modelhuddle gives them one small shared notebook inside your project:
 
 - **Roster:** every agent says who it is and what it is good at.
-- **Tasks and claims:** an agent claims a task (and its files) before working; a second agent claiming overlapping files is refused. Claims understand directories and globs (`src/`, `docs/*.md`), and a claim whose owner has gone quiet is released automatically.
+- **Tasks and claims:** an agent claims a task (and its files) before working; a second agent claiming overlapping files is refused. Claims understand directories and globs (`src/`, `docs/*.md`). **Give every task its `--files`**: without them there is nothing to protect. A claim whose owner has gone quiet is released when another agent needs those files.
 - **Messages:** agents talk to each other (`say` / `inbox`), including to everyone at once.
 - **Handoff:** when one agent hits its usage limit it writes a handoff note and another picks up.
-- **Cheap waiting:** an agent can wait for a reply without spending tokens, and idle agents are woken when a message arrives.
+- **Cheap waiting:** an agent can wait for a reply without spending tokens, and agents with a running session are woken when a message arrives.
+- **Dashboard:** a read-only page that shows who is doing what.
 
-It is a few hundred lines of plain Python (3.10+, standard library only), so you can read all of it before you trust it.
+It is under 1,800 lines of plain Python (3.10+, standard library only) plus one small JavaScript plugin, so you can read all of it before you trust it.
 
 ## How it works
 
 ```
  Claude Code ──┐                       .huddle/state/   (local, git-ignored)
- Antigravity ──┼──►  huddle.py / MCP ──►  board.json  chat.json  agents.json  LOG.md
+ Antigravity ──┼──►  huddle.py / MCP ──►  board.json  chat.json  agents.json  LOG.md  HANDOFF.md
  OpenCode    ──┘     (shell or tools)
 ```
 
@@ -30,25 +35,37 @@ State is a few JSON files. Writes are atomic and serialised with a lock file, so
 
 You need Python 3.10 or newer and git. Nothing else is installed.
 
+**Clone it outside your project** (the installer copies files into the project, it does not need the clone to stay next to it):
+
 ```bash
 git clone https://github.com/coderpix/modelhuddle
 python modelhuddle/install.py /path/to/your/project
 ```
 
+On Windows, quote a path that contains spaces: `python modelhuddle\install.py "C:\My Projects\app"`.
+
 Or let your AI agent do it: open the project in Claude Code (or another agent) and ask, for example: *"Clone https://github.com/coderpix/modelhuddle outside this folder, read its README and install it into this project. Show me the `--dry-run` plan first."*
 
 The installer prints exactly what it will do and asks before changing anything (`--dry-run` only shows the plan, `--yes` skips the question). After it finishes:
 
-1. **Restart the tools** you want to use. Claude Code asks you to approve the MCP server and the hooks on first start; say yes. (OpenCode: check with `opencode mcp list`. Antigravity: see its section below.)
+1. **Restart the tools** you want to use. Claude Code asks you to approve the MCP server and the hooks on first start; say yes. (OpenCode: check with `opencode mcp list`. Antigravity: see [Antigravity notes](#antigravity-notes).)
 2. In each tool, run once:
 
 ```
 /huddle
 ```
 
-Each agent picks a short name, joins the board, reads it once and starts working. Check the setup any time with `python .huddle/huddle.py doctor`.
+Each agent joins the board, reads it once and starts working. The Antigravity CLI (`agy`) does not know `/huddle` (it is an IDE workflow): tell it *"Read the file .agent/workflows/huddle.md and follow it. Join the board as gemini."* instead. Check the setup any time with `python .huddle/huddle.py doctor`.
 
-Run `/huddle` **once in every new chat**: the board remembers the agent's name, but a fresh chat does not know who it is. Joining again with the same name is safe (it updates the entry, it does not add a second one). Until an agent has joined, the hooks and the plugin do nothing, so installing never disturbs a tool you are not using on the board. Hooks and the plugin deliver by name, so every tool has a fixed agent name: `claude`, `opencode`, `gemini`. The installer writes it into each tool's MCP config (`HUDDLE_DEFAULT_NAME`), and the MCP server uses it instead of whatever name the model sends: a model likes to name itself after itself (`gpt-6`), which would break delivery. The real model still shows up in the roster (`--model`). For a second window of the same tool, set `HUDDLE_NAME` before starting it, e.g. `HUDDLE_NAME=opencode-2 opencode`; it beats the fixed name, in the hooks, the plugin and the MCP server. Agents that use only shell commands follow the name in the `/huddle` command text.
+### Joining
+
+Run `/huddle` **once in every new chat**: the board remembers the agent's name, but a fresh chat does not know who it is. Joining again with the same name is safe (it updates the entry, it does not add a second one). Until an agent has joined, the hooks and the plugin do nothing, so installing never disturbs a tool you are not using on the board.
+
+### Agent names
+
+Hooks and the plugin deliver by name, so every tool has a fixed agent name: `claude`, `opencode`, `gemini`. The installer writes it into each tool's MCP config (`HUDDLE_DEFAULT_NAME`), and the MCP server uses it instead of whatever name the model sends: a model likes to name itself after itself (`gpt-6`), which would break delivery. The real model still shows up in the roster (`--model`). Agents that use only shell commands follow the name in the `/huddle` command text. Names are short slugs (`[a-z0-9._-]`, up to 31 characters, starting with a letter or digit).
+
+For a second window of the same tool, set `HUDDLE_NAME` before starting it, e.g. `HUDDLE_NAME=opencode-2 opencode`; it beats the fixed name in the hooks, the plugin and the MCP server.
 
 ### What the installer changes
 
@@ -57,21 +74,54 @@ Run `/huddle` **once in every new chat**: the board remembers the agent's name, 
 | all | `.huddle/` (scripts), `.huddle/.gitignore` | state lives in `.huddle/state/` and is git-ignored |
 | Claude Code | `.claude/commands/huddle.md`, `.mcp.json`, `.claude/settings.json` (3 hooks) | Claude asks you to approve the MCP server and hooks on first start |
 | OpenCode | `.opencode/command/huddle.md`, `.opencode/plugins/huddle.js`, `opencode.json` | check with `opencode mcp list` (if the very first call says no servers, run it again; its background service may still be starting) |
-| Antigravity | `.agent/workflows/huddle.md`, `.agents/hooks.json`, `.agents/mcp_config.json` | see the Antigravity section below |
+| Antigravity | `.agent/workflows/huddle.md`, `.agents/hooks.json`, `.agents/mcp_config.json` | see [Antigravity notes](#antigravity-notes) |
 
-Existing files are **merged, never overwritten**. A key that already exists with different content is skipped with a warning (`--force` replaces only that key and keeps a `.huddle-backup`). A config file that is not valid JSON is left untouched. Pick tools with `--tools claude,opencode`.
+Existing files are **merged, never overwritten**. A key that already exists with different content is skipped with a warning (`--force` replaces only that key and keeps a `.huddle-backup`). A config file that is not valid JSON is left untouched (a UTF-8 BOM is fine). Pick tools with `--tools claude,opencode`.
 
-### Antigravity (Gemini)
+**Sharing the repository:** these are ordinary project files. The hooks, the MCP entries and the plugin make your tools run the scripts in `.huddle/`, so commit them only if your team wants that. `.huddle/state/` is never committed.
+
+### Updating
+
+```bash
+git -C modelhuddle pull
+python modelhuddle/install.py /path/to/your/project --force
+```
+
+`--force` replaces the files and keys the installer owns and keeps a `.huddle-backup` of changed JSON. Copy `.huddle/state/` somewhere first if you want to keep the board (uninstalling deletes it).
+
+## Recommended way to work
+
+1. Open each tool you want in the team (Claude Code, OpenCode, Antigravity CLI `agy`, ...) in the project folder. Terminal apps can run side by side in terminal tabs, for example inside your editor.
+2. In each one, join the board (`/huddle`, see above). They join under their own name.
+3. Talk only to the model you chose as the **lead**, the one you ask to split the work: `/huddle build a settings page`. It splits the work into tasks, gives each an owner and leaves messages for the others.
+4. The others wake up when a message arrives, claim their task, do it and report back with `done`. Waiting costs no tokens: nothing is sent to a model while an agent is idle.
+
+Keep the other tools' windows open: a woken agent needs a running session (see *Wake-up per tool*). Start a new chat? Join again in it.
+
+### Wake-up per tool
+
+| Tool | How a message reaches an agent | Idle agent wakes up? |
+|---|---|---|
+| Claude Code | hooks (after a tool call, at turn start and when a turn ends) | only if it waits (`huddle_wait` / a background `huddle.py wait`); hooks do not fire while it is idle |
+| OpenCode (v2) | plugin: checks the inbox when a turn ends and then every 5 s (`HUDDLE_POLL_SECONDS`, `0` = turn end only) by reading a file | yes, within seconds (verified on v2.0.26 and v2.2.0) |
+| Antigravity CLI (`agy`) | `.agents/hooks.json`: `PreInvocation` injects unread messages; a background `huddle.py wait` that the agent starts wakes it | yes while that `wait` is running (verified on 1.4.8 and 1.4.9); the agent must restart it after each task, and with default permissions every run asks for approval, see [Antigravity notes](#antigravity-notes) |
+| Antigravity IDE | none (Antigravity IDE 2.5.5 has no Hooks tab) | no; the agent reads its inbox itself |
+
+**Full autonomous wake-up works with the Antigravity CLI; in the IDE the agent reads its inbox itself.** Nothing starts a chat that is closed (a background daemon for that is on the [roadmap](ROADMAP.md)).
+
+Models also differ in how much they trust the board. In testing, Claude Code asked the user to confirm before acting on a task that arrived as a board message, while OpenCode and Antigravity agents acted on it. That is the right caution: see [Security](#security).
+
+## Antigravity notes
 
 Antigravity (IDE and CLI) reads project MCP servers from `<project>/.agents/mcp_config.json`, so the installer writes the `huddle` entry there and nothing outside your project is touched. Restart Antigravity and start a **new** chat, since the tool list is built when a chat starts: `huddle` should list 9 tools (IDE: **Manage MCPs**; CLI: `agy mcp list` shows only your user-level servers, ask the agent to list its `huddle_*` tools instead). The agent may ask permission the first time it calls an MCP tool. Without MCP the agent still works through the shell commands.
 
-**Make Antigravity wake up on its own:** an Antigravity agent is turn based. Between turns nothing runs, so it is woken only by a background `huddle.py wait` that it starts itself (the `/huddle` workflow tells it to, and `done` reminds it). Every shell command it runs asks for your approval, and the "always allow" choice is tied to the exact text of that command (a different `--note` and it asks again). To let it work unattended, allow the huddle script once with a regex rule in your user-level `~/.gemini/antigravity-cli/settings.json`:
+**Make the CLI wake up on its own.** An Antigravity agent is turn based. Between turns nothing runs, so it is woken only by a background `huddle.py wait` that it starts itself (the `/huddle` workflow tells it to, and `done` reminds it). Every shell command it runs asks for your approval, and the "always allow" choice is tied to the exact text of that command (a different `--note` and it asks again). To let it work unattended, allow the huddle script once with a regex rule in your user-level settings file (`~/.gemini/antigravity-cli/settings.json`, on Windows `%USERPROFILE%\.gemini\antigravity-cli\settings.json`):
 
 ```json
 { "permissions": { "allow": ["command(regex:python \\.huddle/huddle\\.py .*)"] } }
 ```
 
-The rule matches every `huddle.py` command with any arguments (tested on `agy` 1.4.9: the plain prefix form `command(python .huddle/huddle.py)` and the `*` form did not match, only the `regex:` form did; the backslashes are doubled because this is JSON). Use `mcp(huddle/*)` as well if you want the `huddle_*` tools to run without a prompt. This is your decision: it lets that agent run the board script without asking.
+The rule matches every `huddle.py` command that has arguments (tested on `agy` 1.4.9: the plain prefix form `command(python .huddle/huddle.py)` and the `*` form did not match, only the `regex:` form did; the backslashes are doubled because this is JSON). Use `mcp(huddle/*)` as well if you want the `huddle_*` tools to run without a prompt. This is your decision: it lets that agent run the board script without asking.
 
 > **Old MCP servers of other tools:** a user-level `~/.gemini/config/mcp_config.json` applies to every project. If it contains another kit's server (for example an older `duo` server), the agent may call those tools and talk to that kit's board instead of this project's. Tell it to use the `huddle_*` tools or only shell commands (`python .huddle/huddle.py ...`), or disable the old server (`agy mcp disable <name>`).
 
@@ -83,33 +133,13 @@ The hooks live in the project too (`.agents/hooks.json`) and work in the Antigra
 python .huddle/huddle.py ui --open
 ```
 
-A read-only page on `http://127.0.0.1:8765` (next free port if busy), refreshed every two seconds:
+A read-only page on `http://127.0.0.1:8765` (next free port if busy; `--port 0` picks any free one), refreshed every two seconds:
 
-- **Team:** every agent with its model, whether it is **working**, **idle** or **waiting for a message**, how long ago that was, the task it holds and unread messages. A silent agent that holds a task is flagged.
-- **Tasks and claims, messages, log and a pending handoff.**
+- **Team:** every agent with its model, whether it is **working**, **idle**, **waiting for a message** or **quiet** (no sign for a while; "no sign yet" until it has done anything), how long ago that was, the task it holds, its last action and unread messages. A silent agent that holds a task is flagged.
+- **Tasks and claims, messages, activity and a pending handoff.**
 - **Setup guide:** per tool whether it is installed in this project, whether it has joined, and what to type to join.
 
-The hooks, the OpenCode plugin and `wait` record working / idle / waiting on the board (`huddle.py presence`), so the picture is live. The dashboard only reads: it listens on `127.0.0.1` only, answers `GET` only, checks the `Host` header, sends a strict Content-Security-Policy and builds the page with `textContent` (messages come from other agents, so they are never treated as HTML). Stop it with Ctrl+C.
-
-## Recommended way to work
-
-1. Open each tool you want in the team (Claude Code, OpenCode, Antigravity CLI `agy`, ...) in the project folder. Terminal apps can run side by side in terminal tabs, for example inside your editor.
-2. In each one, type `/huddle` once. They join the board under their own name.
-3. Talk only to the model you chose as the lead: `/huddle build a settings page`. It splits the work into tasks, gives each an owner and leaves messages for the others.
-4. The others wake up when a message arrives, claim their task, do it and report back with `done`. Waiting costs no tokens: nothing is sent to a model while an agent is idle.
-
-Keep the other tools' windows open: a woken agent needs a running session (see *Wake-up per tool*). Start a new chat? Run `/huddle` again in it.
-
-### Wake-up per tool
-
-| Tool | How a message reaches an agent | Idle agent wakes up? |
-|---|---|---|
-| Claude Code | hooks (after a tool call, at turn start and when a turn ends) | only if it waits (`huddle_wait` / a background `huddle.py wait`); hooks do not fire while it is idle |
-| OpenCode (v2) | plugin: checks the inbox when a turn ends and then every 5 s (`HUDDLE_POLL_SECONDS`, `0` = turn end only) by reading a file | yes, within seconds (verified on v2.0.26 and v2.2.0) |
-| Antigravity CLI (`agy`) | `.agents/hooks.json`: `PreInvocation` injects unread messages; a background `huddle.py wait` that the agent starts wakes it | yes while that `wait` is running (verified); the agent must restart it after each task, and with default permissions every run asks for approval, see the Antigravity section |
-| Antigravity IDE | none (the build I tried has no Hooks tab) | no; the agent reads its inbox itself |
-
-Nothing starts a chat that is closed.
+The hooks, the OpenCode plugin and `wait` (the `huddle_wait` MCP tool too) record working / idle / waiting on the board (`huddle.py presence`), so the picture is live. The dashboard only reads: it listens on `127.0.0.1` only, answers `GET` only, checks the `Host` header, sends a strict Content-Security-Policy and builds the page with `textContent` (messages come from other agents, so they are never treated as HTML). Stop it with Ctrl+C.
 
 ## Everyday use
 
@@ -119,7 +149,7 @@ Nothing starts a chat that is closed.
 /huddle handoff                         -> writes what is done and what remains, for the next agent
 ```
 
-Or by hand:
+Or by hand (always give `--files` so claims can protect them):
 
 ```bash
 python .huddle/huddle.py join --as gemini --model "Gemini" --strengths "UI, fast edits"
@@ -132,12 +162,13 @@ python .huddle/huddle.py done 1 --as gemini --note "toggle works"
 | Command | Purpose |
 |---|---|
 | `join`, `status [--all]` | introduce yourself, read the board (compact by default) |
-| `add`, `claim`, `done` | task lifecycle; `claim` refuses overlapping files |
+| `add`, `claim`, `done` | task lifecycle; `add --files a,b` lists what a task touches, `claim` refuses overlapping files |
 | `say`, `inbox [--all]` | messages (to a name or `all`) |
-| `wait [--timeout S]` | block without tokens until a message arrives |
+| `wait [--timeout S] [--interval S]` | block without tokens until a message arrives |
 | `handoff` | pass work on, e.g. when a usage limit is near |
+| `presence --as N --state working\|idle\|waiting` | record what an agent is doing (the hooks and the plugin call this) |
 | `ui [--port N] [--open]` | read-only dashboard: who is doing what |
-| `log`, `doctor`, `reset` | log line, installation check, clear the board (only when you ask) |
+| `log`, `doctor`, `reset`, `--version` | log line, installation check (all three tools, and `python` on the `PATH`), clear the board (only when you ask), version |
 
 ### MCP tools
 
@@ -152,10 +183,10 @@ python .huddle/huddle.py done 1 --as gemini --note "toggle works"
 
 ## Security
 
-- Standard library only; no network access, nothing downloaded at runtime. The hooks run only `huddle_hook.py`, the OpenCode plugin only runs this repository's `huddle.py` (`inbox`). The installer only copies files from this repository.
-- Messages from other agents are labelled as **data, not instructions**; message text is never executed.
-- User input reaches the CLI after a `--` separator, so it cannot be read as a flag (tested, including through MCP).
-- Agent names must match a short slug (`[a-z0-9._-]`, up to 31 characters).
+- **The board is not a trust boundary.** Sender names are not verified: anything that can write the files (an agent, a script, another program on your machine) can post as any name. Messages are labelled **data, not instructions**, but that label is a request to the model, not a technical barrier, and models differ in how well they follow it. Do not put secrets on the board, and do not let an agent act on a board message for something you would not approve yourself.
+- The core (`huddle.py`, the MCP server and the hook) makes no network connections and starts no processes, and nothing is downloaded at runtime. The dashboard listens on `127.0.0.1` only (`--open` starts your browser). The OpenCode plugin runs this repository's `huddle.py` (`inbox`, `presence`). The installer only copies files from this repository.
+- Message text is never executed. User input reaches the CLI after a `--` separator, so it cannot be read as a flag (tested, including through MCP).
+- Agent names must match a short slug (see above).
 - The hook swallows every error and exits 0, so it cannot break a session; it only acts for an agent that has joined.
 - The dashboard (`ui`) is read-only, loopback-only and renders everything as text.
 - Nothing outside the project folder is ever written (the old `--user-config` flag is ignored).
@@ -165,10 +196,11 @@ Report vulnerabilities privately by email: security@coderpix.com (see [SECURITY.
 
 ## Limits (honest list)
 
-- Wake-up differs per tool, see the table above. Claude Code and Antigravity agents that sit idle without waiting are not woken by hooks. `Stop` in Antigravity (keep the agent going) is covered by tests but has not been seen live; the older OpenCode v1 plugin entry point is untested. Nothing starts a chat that is closed.
-- Conflict protection works on the file, directory and glob patterns written on the tasks, not by watching the file system or git. A claim whose owner has been silent for `HUDDLE_STALE_MINUTES` (default 120) is released when someone conflicts with it.
+- **Platforms:** the live testing was done on Windows 11. The code is standard-library Python and the test suite runs on Linux and macOS in CI, but the generated hooks, MCP entries and plugin call plain `python`; where only `python3` exists they will not start (`doctor` warns about it). A fix is on the [roadmap](ROADMAP.md).
+- **Wake-up** differs per tool, see the table above. Claude Code and Antigravity agents that sit idle without waiting are not woken by hooks. `Stop` in Antigravity (keep the agent going) is covered by tests but has not been seen live; the older OpenCode v1 plugin entry point is untested. Nothing starts a chat that is closed.
+- **Conflict protection** works on the file, directory and glob patterns written on the tasks, not by watching the file system or git; a task without `--files` is not protected. A claim whose owner has been silent for `HUDDLE_STALE_MINUTES` (default 120) is released when someone conflicts with it.
 - State is local to one machine and one project folder; there is no network sync.
-- The dashboard is read-only: you cannot add, remove or reassign from it yet. Other projects such as hcom or Concord MCP offer more features (idle wake-up for more tools, richer conflict handling, UI); modelhuddle trades those for being small, dependency-free and auditable.
+- The dashboard is read-only: you cannot add, remove or reassign from it yet.
 - The OpenCode and Claude Code config shapes follow their current versions; check `opencode mcp list` / `/mcp` after installing.
 
 ## Roadmap
@@ -181,15 +213,15 @@ Planned, not built yet: an optional background daemon that wakes agents whose ch
 python modelhuddle/install.py /path/to/project --uninstall
 ```
 
-Removes what the installer added (merged keys only, your other settings stay) and the `.huddle/` folder including saved board state. User-level files are never removed automatically.
+Removes what the installer added (merged keys only, your other settings stay; command and plugin files too, unless you edited them) and the `.huddle/` folder including saved board state. Nothing outside the project was ever written, so there is nothing else to clean up.
 
-## Tests
+## Tests and contributing
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-31 tests run against temporary folders and never touch your real settings.
+35 tests run against temporary folders and never touch your real settings. See [CONTRIBUTING.md](CONTRIBUTING.md) if you want to help.
 
 ## License
 
