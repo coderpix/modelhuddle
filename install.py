@@ -29,7 +29,7 @@ SRC = Path(__file__).resolve().parent / "huddle"
 REPO = Path(__file__).resolve().parent
 HOOK_EVENTS = ("UserPromptSubmit", "PostToolUse", "Stop")
 HOOK_CMD = 'python "$CLAUDE_PROJECT_DIR/.huddle/huddle_hook.py"'
-CODE_FILES = ("huddle.py", "huddle_mcp.py", "huddle_hook.py", "VERSION")
+CODE_FILES = ("huddle.py", "huddle_mcp.py", "huddle_hook.py", "huddle_ui.py", "VERSION")
 COMMANDS = {
     "claude": ("claude-huddle.md", ".claude/commands/huddle.md"),
     "opencode": ("opencode-huddle.md", ".opencode/command/huddle.md"),

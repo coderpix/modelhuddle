@@ -7,7 +7,8 @@ messages while idle, use `huddle_wait` (MCP) or `huddle.py wait`.
 
 Security:
   - No network, no subprocess, message text is never executed.
-  - Reads and writes only the board's chat file (delivered messages are marked read).
+  - Reads and writes only the board's chat and roster files (delivered messages are marked read; the roster
+    gets a working/idle mark for the dashboard).
   - Messages are labelled as data, not instructions, and truncated.
   - Every error is swallowed (exit 0): the hook can never break a session.
   - Active only for an agent that already joined the board. Name: HUDDLE_NAME env var, else "claude".
@@ -57,6 +58,11 @@ def main() -> None:
         return
     if who not in json.loads(huddle.ROSTER.read_text(encoding="utf-8")):
         return
+    try:  # presence for the dashboard: a turn ending means idle, anything else means working
+        with huddle.locked(timeout=2):
+            huddle.set_presence(who, "idle" if event == "Stop" else "working")
+    except Exception:  # never let bookkeeping break a session
+        pass
     if not huddle.CHAT.exists():
         return
 

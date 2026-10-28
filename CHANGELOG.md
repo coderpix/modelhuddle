@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `huddle.py ui [--port N] [--open]`: read-only dashboard (team with working / idle / waiting, tasks and claims, messages, log, handoff, setup guide). Loopback only, GET only, `Host` check, strict CSP, everything rendered with `textContent`.
+- `huddle.py presence --as <name> --state working|idle|waiting`: the hooks, the OpenCode plugin and `wait` record what an agent is doing; it also refreshes the agent's last-seen time used for stale claims.
+
 ## [0.2.1] - 2026-10-28
 
 ### Changed

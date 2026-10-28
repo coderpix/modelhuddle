@@ -5,11 +5,15 @@ Everything runs against throw-away temp folders; your real HOME and projects are
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -289,6 +293,117 @@ class HookTests(Base):
         out = self.run_hook("UserPromptSubmit")
         self.assertNotIn("Z" * 600, out)
         self.assertIn("more", out)
+
+
+class PresenceTests(Base):
+    def roster(self) -> dict:
+        return json.loads((self.state / "agents.json").read_text(encoding="utf-8"))
+
+    def test_presence_command_only_for_joined_agents(self):
+        huddle(self.state, "presence", "--as", "ghost", "--state", "working")
+        self.assertFalse((self.state / "agents.json").exists())
+        huddle(self.state, "join", "--as", "a")
+        huddle(self.state, "presence", "--as", "a", "--state", "working")
+        self.assertEqual(self.roster()["a"]["state"], "working")
+        self.assertNotEqual(huddle(self.state, "presence", "--as", "a", "--state", "dancing").returncode, 0)
+
+    def test_hook_marks_working_and_idle(self):
+        huddle(self.state, "join", "--as", "claude")
+        e = env_for(self.state)
+
+        def hook(payload):
+            subprocess.run([PY, str(SRC / "huddle_hook.py")], input=json.dumps(payload), env=e, capture_output=True,
+                           text=True, encoding="utf-8", timeout=30)
+
+        hook({"hook_event_name": "UserPromptSubmit"})
+        self.assertEqual(self.roster()["claude"]["state"], "working")
+        hook({"hook_event_name": "Stop"})
+        self.assertEqual(self.roster()["claude"]["state"], "idle")
+        hook({"executionNum": 1, "fullyIdle": True})  # Antigravity Stop payload (no event name)
+        self.assertEqual(self.roster()["claude"]["state"], "idle")
+
+    def test_wait_marks_waiting_then_working(self):
+        huddle(self.state, "join", "--as", "a")
+        p = subprocess.Popen([PY, str(SRC / "huddle.py"), "wait", "--as", "a", "--interval", "0.2"], env=env_for(self.state),
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            for _ in range(50):
+                if (self.state / "agents.json").exists() and self.roster()["a"].get("state") == "waiting":
+                    break
+                time.sleep(0.1)
+            self.assertEqual(self.roster()["a"]["state"], "waiting")
+            huddle(self.state, "say", "wake up", "--as", "b", "--to", "a")
+            p.wait(timeout=20)
+            self.assertEqual(self.roster()["a"]["state"], "working")
+        finally:
+            p.kill()
+            p.wait(timeout=10)
+            p.stdout.close()
+            p.stderr.close()
+
+
+class DashboardTests(Base):
+    def start(self):
+        self.proc = subprocess.Popen([PY, str(SRC / "huddle.py"), "ui", "--port", "0"], env=env_for(self.state),
+                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8")
+        line = self.proc.stdout.readline()
+        self.addCleanup(self.stop)
+        m = re.search(r"http://127\.0\.0\.1:(\d+)", line)
+        self.assertIsNotNone(m, line)
+        self.port = int(m.group(1))
+
+    def stop(self):
+        self.proc.kill()
+        self.proc.wait(timeout=10)
+        self.proc.stdout.close()
+
+    def get(self, path: str, host: str | None = None):
+        req = urllib.request.Request(f"http://127.0.0.1:{self.port}{path}", headers={"Host": host} if host else {})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as r:
+                return r.status, dict(r.headers), r.read().decode("utf-8")
+        except urllib.error.HTTPError as e:
+            return e.code, dict(e.headers), e.read().decode("utf-8")
+
+    def test_state_shows_who_does_what_and_keeps_messages_as_data(self):
+        huddle(self.state, "join", "--as", "claude", "--model", "Claude")
+        huddle(self.state, "join", "--as", "opencode", "--model", "GPT")
+        huddle(self.state, "presence", "--as", "claude", "--state", "working")
+        huddle(self.state, "add", "Demo <b>task</b>", "--owner", "opencode", "--files", "src/")
+        huddle(self.state, "claim", "1", "--as", "opencode")
+        huddle(self.state, "say", "<script>alert(1)</script> hi", "--as", "claude", "--to", "opencode")
+        self.start()
+        code, headers, body = self.get("/api/state")
+        self.assertEqual(code, 200)
+        d = json.loads(body)
+        agents = {a["name"]: a for a in d["agents"]}
+        self.assertEqual(agents["claude"]["state"], "working")
+        self.assertEqual(agents["opencode"]["tasks"], [1])
+        self.assertEqual(agents["opencode"]["unread"], 1)
+        self.assertEqual(d["tasks"][0]["title"], "Demo <b>task</b>")
+        self.assertEqual(d["messages"][0]["text"], "<script>alert(1)</script> hi")  # raw data, rendered with textContent
+        self.assertEqual([g["name"] for g in d["guide"]], ["claude", "opencode", "gemini"])
+        self.assertFalse(d["guide"][0]["installed"])
+
+    def test_is_read_only_local_and_locked_down(self):
+        self.start()
+        self.assertEqual(self.get("/")[0], 200)
+        code, headers, _ = self.get("/api/state")
+        self.assertIn("script-src 'self'", headers["Content-Security-Policy"])
+        self.assertEqual(self.get("/api/state", host="evil.example")[0], 403)  # DNS rebinding guard
+        self.assertEqual(self.get("/nope")[0], 404)
+        for method in ("POST", "PUT", "DELETE"):
+            req = urllib.request.Request(f"http://127.0.0.1:{self.port}/api/state", data=b"x", method=method)
+            with self.assertRaises(urllib.error.HTTPError) as cm:
+                urllib.request.urlopen(req, timeout=10)
+            self.assertEqual(cm.exception.code, 405)
+
+    def test_page_script_never_injects_html(self):
+        self.start()
+        js = self.get("/app.js")[2]
+        for bad in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function"):
+            self.assertNotIn(bad, js)
+        self.assertIn("textContent", js)
 
 
 class InstallerTests(Base):

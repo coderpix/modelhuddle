@@ -20,6 +20,7 @@ Usage (<me> = the short name you chose for yourself, e.g. claude, gemini, gpt-5)
     huddle.py inbox --as <me> [--all]
     huddle.py wait --as <me> [--timeout SECONDS]
     huddle.py log "<message>" --as <me>
+    huddle.py ui [--port N] [--open]
     huddle.py doctor
     huddle.py reset
 """
@@ -148,6 +149,23 @@ def touch_roster(who: str) -> None:
     if entry.get("seen") != now():
         entry["seen"] = now()
         save_roster(r)
+
+
+PRESENCE_STATES = ("working", "idle", "waiting")
+
+
+def set_presence(who: str, state: str) -> None:
+    """Record what an agent is doing right now. Only for agents that joined; the caller holds the lock.
+    Repeating the same state within 10 s is skipped, so a busy hook does not rewrite the file."""
+    roster = load_roster()
+    entry = roster.get(who)
+    if entry is None:
+        return
+    ts = time.time()
+    if entry.get("state") == state and ts - entry.get("active_ts", 0) < 10:
+        return
+    entry.update(state=state, active_ts=round(ts), seen=now())
+    save_roster(roster)
 
 
 def minutes_since(stamp: str) -> float:
@@ -370,12 +388,16 @@ def cmd_wait(a) -> None:
     """Blocks without using tokens until an unread message arrives; prints it and exits.
     Does not mark as read (run `inbox` for that). Exit code 1 on timeout."""
     start = time.time()
+    with locked():
+        set_presence(a.who, "waiting")
     while True:
         try:
             new = unread_for(load_chat(), a.who)
         except (OSError, ValueError):
             new = []  # file may be mid-replace
         if new:
+            with locked():
+                set_presence(a.who, "working")  # the message wakes the agent
             for m in new:
                 print(f"#{m['id']} {m['from']} -> {m['to']}: {m['text']}")
             return
@@ -383,6 +405,16 @@ def cmd_wait(a) -> None:
             print("(timeout, no new messages)")
             sys.exit(1)
         time.sleep(a.interval)
+
+
+def cmd_presence(a) -> None:
+    set_presence(a.who, a.state)
+
+
+def cmd_ui(a) -> None:
+    import huddle_ui  # lazy: only needed for this command
+
+    huddle_ui.run(a.port, a.open)
 
 
 def project_root() -> Path:
@@ -495,11 +527,21 @@ def main() -> None:
     s.add_argument("--timeout", type=float, default=0, help="seconds, 0 = forever")
     s.set_defaults(fn=cmd_wait)
 
+    s = sub.add_parser("presence", help="record what an agent is doing (used by the hooks and the plugin)")
+    s.add_argument("--as", dest="who", required=True, type=name)
+    s.add_argument("--state", required=True, choices=PRESENCE_STATES)
+    s.set_defaults(fn=cmd_presence)
+
+    s = sub.add_parser("ui", help="open the read-only dashboard (127.0.0.1 only)")
+    s.add_argument("--port", type=int, default=8765, help="0 = any free port")
+    s.add_argument("--open", action="store_true", help="open it in the browser")
+    s.set_defaults(fn=cmd_ui)
+
     sub.add_parser("doctor").set_defaults(fn=cmd_doctor)
     sub.add_parser("reset").set_defaults(fn=cmd_reset)
 
     a = p.parse_args()
-    if a.fn in (cmd_wait, cmd_doctor):  # long wait / read-mostly: do not hold the lock
+    if a.fn in (cmd_wait, cmd_doctor, cmd_ui):  # long-running / read-mostly: do not hold the lock
         a.fn(a)
     else:
         with locked():

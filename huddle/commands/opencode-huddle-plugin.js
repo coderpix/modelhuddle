@@ -4,6 +4,7 @@
 // agent's inbox; if there are unread messages, hand them to the session as a new prompt.
 // Polling only reads a local file, it never calls a model. Messages are labelled as data, never
 // as instructions. HUDDLE_POLL_SECONDS sets the polling interval (default 5, 0 = only at turn end).
+// It also marks the agent as working / idle on the board, for the dashboard (`huddle.py ui`).
 // No network access. Every error is swallowed, so the plugin cannot break a session.
 // Agent name: HUDDLE_NAME env var, else "opencode". Active only after the agent has joined.
 //
@@ -45,6 +46,12 @@ function makeWake(directory, send) {
         (err, stdout) => resolve(err ? "" : String(stdout).trim()))
     })
 
+  const presence = (state) => {
+    if (!joined()) return
+    execFile("python", [join(directory, ".huddle", "huddle.py"), "presence", "--as", WHO, "--state", state],
+      { cwd: directory, timeout: 15000, windowsHide: true }, () => {})
+  }
+
   const wake = async (sessionID) => {
     if (busy || !sessionID || !joined() || !hasUnread()) return
     busy = true
@@ -59,6 +66,7 @@ function makeWake(directory, send) {
       busy = false
     }
   }
+  wake.presence = presence
   return wake
 }
 
@@ -74,13 +82,18 @@ export default {
         for await (const ev of ctx.event.subscribe({ signal: stop.signal })) {
           const id = ev.data?.sessionID
           if (!id) continue
-          if (ev.type === "session.execution.started") idle.delete(id)
-          else if (ev.type === "session.execution.succeeded") {
+          if (ev.type === "session.execution.started") {
+            idle.delete(id)
+            wake.presence("working")
+          } else if (ev.type === "session.execution.succeeded") {
             idle.delete(id)
             idle.add(id)
+            wake.presence("idle")
             void wake(id)
-          } else if (ev.type === "session.execution.failed" || ev.type === "session.execution.interrupted") idle.delete(id)
-          else if (ev.type === "session.deleted") idle.delete(id)
+          } else if (ev.type === "session.execution.failed" || ev.type === "session.execution.interrupted") {
+            idle.delete(id)
+            wake.presence("idle")
+          } else if (ev.type === "session.deleted") idle.delete(id)
         }
       } catch {
         // subscription ended

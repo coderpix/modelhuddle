@@ -77,6 +77,20 @@ The rule matches every `huddle.py` command with any arguments (tested on `agy` 1
 
 The hooks live in the project too (`.agents/hooks.json`) and work in the Antigravity CLI (`agy`). Antigravity runs them from the `.agents` folder and does not understand quoted paths, so the installer writes `python ../.huddle/huddle_hook.py --name gemini`; `python` must be on your `PATH`.
 
+## Dashboard: who is doing what
+
+```bash
+python .huddle/huddle.py ui --open
+```
+
+A read-only page on `http://127.0.0.1:8765` (next free port if busy), refreshed every two seconds:
+
+- **Team:** every agent with its model, whether it is **working**, **idle** or **waiting for a message**, how long ago that was, the task it holds and unread messages. A silent agent that holds a task is flagged.
+- **Tasks and claims, messages, log and a pending handoff.**
+- **Setup guide:** per tool whether it is installed in this project, whether it has joined, and what to type to join.
+
+The hooks, the OpenCode plugin and `wait` record working / idle / waiting on the board (`huddle.py presence`), so the picture is live. The dashboard only reads: it listens on `127.0.0.1` only, answers `GET` only, checks the `Host` header, sends a strict Content-Security-Policy and builds the page with `textContent` (messages come from other agents, so they are never treated as HTML). Stop it with Ctrl+C.
+
 ## Recommended way to work
 
 1. Open each tool you want in the team (Claude Code, OpenCode, Antigravity CLI `agy`, ...) in the project folder. Terminal apps can run side by side in terminal tabs, for example inside your editor.
@@ -122,6 +136,7 @@ python .huddle/huddle.py done 1 --as gemini --note "toggle works"
 | `say`, `inbox [--all]` | messages (to a name or `all`) |
 | `wait [--timeout S]` | block without tokens until a message arrives |
 | `handoff` | pass work on, e.g. when a usage limit is near |
+| `ui [--port N] [--open]` | read-only dashboard: who is doing what |
 | `log`, `doctor`, `reset` | log line, installation check, clear the board (only when you ask) |
 
 ### MCP tools
@@ -142,6 +157,7 @@ python .huddle/huddle.py done 1 --as gemini --note "toggle works"
 - User input reaches the CLI after a `--` separator, so it cannot be read as a flag (tested, including through MCP).
 - Agent names must match a short slug (`[a-z0-9._-]`, up to 31 characters).
 - The hook swallows every error and exits 0, so it cannot break a session; it only acts for an agent that has joined.
+- The dashboard (`ui`) is read-only, loopback-only and renders everything as text.
 - Nothing outside the project folder is ever written (the old `--user-config` flag is ignored).
 - Tested: concurrent writers lose nothing, a failed write does not truncate state, non-ASCII text survives Windows consoles.
 
@@ -152,7 +168,7 @@ Report vulnerabilities privately by email: security@coderpix.com (see [SECURITY.
 - Wake-up differs per tool, see the table above. Claude Code and Antigravity agents that sit idle without waiting are not woken by hooks. `Stop` in Antigravity (keep the agent going) is covered by tests but has not been seen live; the older OpenCode v1 plugin entry point is untested. Nothing starts a chat that is closed.
 - Conflict protection works on the file, directory and glob patterns written on the tasks, not by watching the file system or git. A claim whose owner has been silent for `HUDDLE_STALE_MINUTES` (default 120) is released when someone conflicts with it.
 - State is local to one machine and one project folder; there is no network sync.
-- No dashboard. Other projects such as hcom or Concord MCP offer more features (idle wake-up for more tools, richer conflict handling, UI); modelhuddle trades those for being small, dependency-free and auditable.
+- The dashboard is read-only: you cannot add, remove or reassign from it yet. Other projects such as hcom or Concord MCP offer more features (idle wake-up for more tools, richer conflict handling, UI); modelhuddle trades those for being small, dependency-free and auditable.
 - The OpenCode and Claude Code config shapes follow their current versions; check `opencode mcp list` / `/mcp` after installing.
 
 ## Uninstall
@@ -169,7 +185,7 @@ Removes what the installer added (merged keys only, your other settings stay) an
 python -m unittest discover -s tests -v
 ```
 
-25 tests run against temporary folders and never touch your real settings.
+31 tests run against temporary folders and never touch your real settings.
 
 ## License
 

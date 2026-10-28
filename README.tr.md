@@ -77,6 +77,20 @@ Kural, her argümanla çalışan tüm `huddle.py` komutlarına uyar (`agy` 1.4.9
 
 Hook'lar da projede (`.agents/hooks.json`) durur ve Antigravity CLI'da (`agy`) çalışır. Antigravity onları `.agents` klasöründen çalıştırır ve tırnaklı yolları anlamaz, bu yüzden kurulum `python ../.huddle/huddle_hook.py --name gemini` yazar; `python` senin `PATH`'inde olmalı.
 
+## Panel: kim ne yapıyor
+
+```bash
+python .huddle/huddle.py ui --open
+```
+
+`http://127.0.0.1:8765` adresinde (meşgulse sıradaki boş port) salt okunur bir sayfa, iki saniyede bir yenilenir:
+
+- **Ekip:** her ajan, modeli, **çalışıyor**, **boşta** veya **mesaj bekliyor** durumu, bunun ne kadar önce olduğu, tuttuğu görev ve okunmamış mesajlarıyla. Görev tutup uzun süredir sessiz kalan ajan işaretlenir.
+- **Görevler ve sahiplenmeler, mesajlar, günlük ve bekleyen devir.**
+- **Kurulum rehberi:** her araç için bu projede kurulu mu, katıldı mı ve katılmak için ne yazılacağı.
+
+Hook'lar, OpenCode eklentisi ve `wait` çalışıyor / boşta / bekliyor bilgisini panoya yazar (`huddle.py presence`), böylece görüntü canlıdır. Panel yalnızca okur: yalnızca `127.0.0.1`'i dinler, yalnızca `GET` yanıtlar, `Host` başlığını denetler, sıkı bir Content-Security-Policy gönderir ve sayfayı `textContent` ile kurar (mesajlar başka ajanlardan gelir, bu yüzden hiçbir zaman HTML sayılmaz). Ctrl+C ile durdur.
+
 ## Önerilen çalışma şekli
 
 1. Takımda olmasını istediğin her aracı (Claude Code, OpenCode, Antigravity CLI `agy`, ...) proje klasöründe aç. Terminal uygulamaları, örneğin editörünün içinde, terminal sekmelerinde yan yana çalışabilir.
@@ -122,6 +136,7 @@ python .huddle/huddle.py done 1 --as gemini --note "düğme çalışıyor"
 | `say`, `inbox [--all]` | mesajlar (bir ada veya `all`) |
 | `wait [--timeout S]` | mesaj gelene kadar token harcamadan bekle |
 | `handoff` | işi devret, örneğin kullanım limiti yaklaşınca |
+| `ui [--port N] [--open]` | salt okunur panel: kim ne yapıyor |
 | `log`, `doctor`, `reset` | günlük satırı, kurulum kontrolü, panoyu temizle (sadece sen istersen) |
 
 ### MCP araçları
@@ -142,6 +157,7 @@ python .huddle/huddle.py done 1 --as gemini --note "düğme çalışıyor"
 - Kullanıcı girdisi komut satırına `--` ayırıcısından sonra geçer, bayrak olarak okunamaz (MCP üzerinden dahil test edildi).
 - Ajan adları kısa bir slug kuralına uymalıdır (`[a-z0-9._-]`, en fazla 31 karakter).
 - Hook her hatayı yutar ve 0 ile çıkar, bu yüzden oturumu bozamaz; yalnızca panoya katılmış ajan için çalışır.
+- Panel (`ui`) salt okunurdur, yalnızca loopback'te dinler ve her şeyi metin olarak gösterir.
 - Proje klasörünün dışına hiçbir şey yazılmaz (eski `--user-config` bayrağı yok sayılır).
 - Test edildi: eşzamanlı yazanlar hiçbir şey kaybetmez, başarısız yazma durumu bozmaz, ASCII dışı metin Windows konsollarında bozulmaz.
 
@@ -152,7 +168,7 @@ Güvenlik açıklarını özel olarak e-postayla bildir: security@coderpix.com (
 - Uyandırma araca göre değişir, yukarıdaki tabloya bak. Boşta bekleyip `wait` kullanmayan Claude Code ve Antigravity ajanları hook'larla uyandırılmaz. Antigravity'deki `Stop` (ajanı çalışır tutma) testlerle kapsanıyor ama canlı görülmedi; eski OpenCode v1 giriş noktası denenmedi. Kapalı bir sohbeti başlatan bir şey yok.
 - Çakışma koruması, görevlere yazılan dosya, klasör ve glob desenlerine göre çalışır; dosya sistemini veya git'i izlemez. Sahibi `HUDDLE_STALE_MINUTES` süre (varsayılan 120) sessiz kalan bir sahiplenme, biri onunla çakışınca bırakılır.
 - Durum tek makineye ve tek proje klasörüne özeldir; ağ üzerinden senkronizasyon yok.
-- Panel yok. hcom veya Concord MCP gibi projeler daha fazla özellik sunar (daha çok araçta boşta uyandırma, daha zengin çakışma yönetimi, arayüz); modelhuddle bunların yerine küçük, bağımlılıksız ve denetlenebilir olmayı seçer.
+- Panel salt okunurdur: henüz içinden ekleme, silme veya yeniden atama yapılamaz. hcom veya Concord MCP gibi projeler daha fazla özellik sunar (daha çok araçta boşta uyandırma, daha zengin çakışma yönetimi, arayüz); modelhuddle bunların yerine küçük, bağımlılıksız ve denetlenebilir olmayı seçer.
 - OpenCode ve Claude Code ayar biçimleri güncel sürümlerine göre yazıldı; kurulumdan sonra `opencode mcp list` / `/mcp` ile kontrol et.
 
 ## Kaldırma
@@ -169,7 +185,7 @@ Kurulumun eklediklerini (yalnızca birleştirilen anahtarlar, diğer ayarların 
 python -m unittest discover -s tests -v
 ```
 
-25 test geçici klasörlerde çalışır, gerçek ayarlarına dokunmaz.
+31 test geçici klasörlerde çalışır, gerçek ayarlarına dokunmaz.
 
 ## Lisans
 
