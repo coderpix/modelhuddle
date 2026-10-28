@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- Antigravity MCP is now configured per project in `.agents/mcp_config.json` (read by the IDE and the CLI) instead of the user-level `~/.gemini/config/mcp_config.json`. The installer no longer writes anything outside the project; `--user-config` is accepted and ignored. This removes the single-fixed-path problem (one user-level entry pointed at one project's board).
+
 ### Fixed
 - The MCP server now uses a fixed agent name per tool (`HUDDLE_DEFAULT_NAME`, written by the installer into `.mcp.json`, `opencode.json` and the Antigravity entry) instead of the name the model sends; `HUDDLE_NAME` overrides it per window. Without this an OpenCode agent running GPT joined as `gpt-6` even though the command text said otherwise, because the MCP tool description nudged it. Verified end to end: GPT-6.1 joined as `opencode` and was woken within seconds.
 - `/huddle` now tells each tool to join under its own fixed name (`claude`, `opencode`, `gemini`) instead of a name derived from the model. Hooks and the plugin deliver to those names, so an agent that called itself e.g. `gpt-6-1` was never woken automatically.

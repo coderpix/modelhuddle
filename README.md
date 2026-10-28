@@ -57,23 +57,17 @@ Run `/huddle` **once in every new chat**: the board remembers the agent's name, 
 | all | `.huddle/` (scripts), `.huddle/.gitignore` | state lives in `.huddle/state/` and is git-ignored |
 | Claude Code | `.claude/commands/huddle.md`, `.mcp.json`, `.claude/settings.json` (3 hooks) | Claude asks you to approve the MCP server and hooks on first start |
 | OpenCode | `.opencode/command/huddle.md`, `.opencode/plugins/huddle.js`, `opencode.json` | check with `opencode mcp list` (if the very first call says no servers, run it again; its background service may still be starting) |
-| Antigravity | `.agent/workflows/huddle.md`, `.agents/hooks.json` | MCP lives in a **user-level** file, see below |
+| Antigravity | `.agent/workflows/huddle.md`, `.agents/hooks.json`, `.agents/mcp_config.json` | see the Antigravity section below |
 
 Existing files are **merged, never overwritten**. A key that already exists with different content is skipped with a warning (`--force` replaces only that key and keeps a `.huddle-backup`). A config file that is not valid JSON is left untouched. Pick tools with `--tools claude,opencode`.
 
 ### Antigravity (Gemini)
 
-Antigravity reads MCP servers from your **user** folder, not from the project, so the installer only prints the entry by default. Either add it yourself or let the installer do it with a backup:
+Antigravity (IDE and CLI) reads project MCP servers from `<project>/.agents/mcp_config.json`, so the installer writes the `huddle` entry there and nothing outside your project is touched. Restart Antigravity and start a **new** chat, since the tool list is built when a chat starts: `huddle` should list 9 tools (IDE: **Manage MCPs**; CLI: `agy mcp list` shows only your user-level servers, ask the agent to list its `huddle_*` tools instead). The agent may ask permission the first time it calls an MCP tool. Without MCP the agent still works through the shell commands.
 
-```bash
-python install.py /path/to/project --user-config
-```
+> **Old MCP servers of other tools:** a user-level `~/.gemini/config/mcp_config.json` applies to every project. If it contains another kit's server (for example an older `duo` server), the agent may call those tools and talk to that kit's board instead of this project's. Tell it to use the `huddle_*` tools or only shell commands (`python .huddle/huddle.py ...`), or disable the old server (`agy mcp disable <name>`).
 
-The file Antigravity actually reads is `~/.gemini/config/mcp_config.json` (`~/.gemini/antigravity/mcp_config.json` is the old, migrated location and is ignored). Use the absolute path of your Python in `command`, because the IDE may run with a different `PATH`. After editing, restart Antigravity and open **Manage MCPs**: `huddle` should list 9 tools. Start a **new** chat, since the tool list is built when a chat starts. Without MCP the agent still works through the shell commands.
-
-> **One board per user:** `mcp_config.json` is shared by every Antigravity window and names one fixed script path. If it points at another project's `.huddle/` (for example from an earlier install), the agent talks to that project's board instead of the one you opened. Use one project at a time, point the entry at the right project, or tell the agent to use only shell commands (`python .huddle/huddle.py ...`).
-
-The hooks live in the project (`.agents/hooks.json`) and work in the Antigravity CLI (`agy`). Antigravity runs them from the `.agents` folder and does not understand quoted paths, so the installer writes `python ../.huddle/huddle_hook.py --name gemini`; `python` must be on your `PATH`.
+The hooks live in the project too (`.agents/hooks.json`) and work in the Antigravity CLI (`agy`). Antigravity runs them from the `.agents` folder and does not understand quoted paths, so the installer writes `python ../.huddle/huddle_hook.py --name gemini`; `python` must be on your `PATH`.
 
 ## Recommended way to work
 
@@ -140,7 +134,7 @@ python .huddle/huddle.py done 1 --as gemini --note "toggle works"
 - User input reaches the CLI after a `--` separator, so it cannot be read as a flag (tested, including through MCP).
 - Agent names must match a short slug (`[a-z0-9._-]`, up to 31 characters).
 - The hook swallows every error and exits 0, so it cannot break a session; it only acts for an agent that has joined.
-- Configs outside the project are written only with `--user-config`, with a backup.
+- Nothing outside the project folder is ever written (the old `--user-config` flag is ignored).
 - Tested: concurrent writers lose nothing, a failed write does not truncate state, non-ASCII text survives Windows consoles.
 
 Report vulnerabilities privately by email: security@coderpix.com (see [SECURITY.md](SECURITY.md)).

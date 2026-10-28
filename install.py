@@ -13,8 +13,7 @@ Safety rules:
   - Existing config files are MERGED, never overwritten. A key that already exists with
     different content is skipped (use --force to replace only that key; a backup is kept).
   - A config file that is not valid JSON is left untouched.
-  - Files outside the project (e.g. Antigravity's user-level mcp_config.json) are written
-    only with --user-config, with a backup next to them.
+  - Nothing outside the project folder is ever written (--user-config is accepted but ignored).
   - Nothing is downloaded and nothing is executed: it only copies files from this repository.
 Standard library only (Python 3.10+).
 """
@@ -177,20 +176,16 @@ def install_antigravity(ctx: Ctx) -> None:
     data, ok = read_json(hooks_file, ctx)
     if ok and merge_key(data, "huddle", {"PreInvocation": handler, "Stop": handler}, ctx, ".agents/hooks.json huddle"):
         write_json(hooks_file, data, ctx, hooks_file.exists())
-    script = (ctx.project / ".huddle" / "huddle_mcp.py").resolve().as_posix()
-    entry = {"command": Path(sys.executable).as_posix(), "args": [script], "env": {"HUDDLE_DEFAULT_NAME": "gemini"}}
-    cfg = Path.home() / ".gemini" / "config" / "mcp_config.json"
-    if not ctx.user_config:
-        print(f"  Antigravity reads a USER-level file, which this installer does not touch by default.")
-        print(f"  Add this entry to {cfg} (merge it, keep other servers), then restart Antigravity:")
-        print('  "mcpServers": { "huddle": ' + json.dumps(entry) + " }")
-        return
-    data, ok = read_json(cfg, ctx)
-    if ok:
-        if cfg.exists() and cfg.stat().st_size == 0:
-            data = {}
-        if merge_key(data.setdefault("mcpServers", {}), "huddle", entry, ctx, f"{cfg} mcpServers.huddle"):
-            write_json(cfg, data, ctx, cfg.exists() and cfg.stat().st_size > 0)
+    # Antigravity (IDE and CLI) reads project MCP servers from .agents/mcp_config.json; it starts them
+    # in the project folder, so a relative path works. Nothing outside the project is touched.
+    mcp_file = ctx.project / ".agents" / "mcp_config.json"
+    entry = {"command": "python", "args": [".huddle/huddle_mcp.py"], "env": {"HUDDLE_DEFAULT_NAME": "gemini"}}
+    data, ok = read_json(mcp_file, ctx)
+    if ok and merge_key(data.setdefault("mcpServers", {}), "huddle", entry, ctx, ".agents/mcp_config.json mcpServers.huddle"):
+        write_json(mcp_file, data, ctx, mcp_file.exists())
+    print("  MCP is configured per project (.agents/mcp_config.json); no user-level file is needed.")
+    print("  If an older MCP server of another tool also shows up, tell the agent to use the huddle_* tools,")
+    print("  or disable the old one (for the CLI: agy mcp disable <name>).")
 
 
 def uninstall(ctx: Ctx) -> None:
@@ -245,7 +240,16 @@ def uninstall(ctx: Ctx) -> None:
             return True
         return False
 
+    def edit_agy_mcp(d):
+        s = d.get("mcpServers", {})
+        if "huddle" in s:
+            del s["huddle"]
+            ctx.say(".agents/mcp_config.json: remove mcpServers.huddle")
+            return True
+        return False
+
     drop(ctx.project / ".agents" / "hooks.json", edit_agy)
+    drop(ctx.project / ".agents" / "mcp_config.json", edit_agy_mcp)
     drop(ctx.project / ".mcp.json", edit_mcp)
     drop(ctx.project / "opencode.json", edit_oc)
     drop(ctx.project / ".claude" / "settings.json", edit_hooks)
@@ -254,7 +258,7 @@ def uninstall(ctx: Ctx) -> None:
         ctx.say("delete .huddle/ (scripts AND saved board state)")
         if ctx.apply:
             shutil.rmtree(d)
-    print("User-level files (e.g. Antigravity's mcp_config.json) are never removed automatically; delete the huddle entry yourself.")
+    print("Nothing outside the project was ever written, so there is nothing else to remove.")
 
 
 def main() -> int:
@@ -264,7 +268,7 @@ def main() -> int:
     p.add_argument("--yes", action="store_true", help="do not ask for confirmation")
     p.add_argument("--dry-run", action="store_true", help="show the plan and exit")
     p.add_argument("--force", action="store_true", help="replace differing files/keys (backups are kept for JSON)")
-    p.add_argument("--user-config", action="store_true", help="also write user-level files (Antigravity), with backup")
+    p.add_argument("--user-config", action="store_true", help="deprecated and ignored: nothing outside the project is ever written")
     p.add_argument("--uninstall", action="store_true", help="remove what the installer added")
     a = p.parse_args()
 

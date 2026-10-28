@@ -336,14 +336,15 @@ class InstallerTests(Base):
         self.assertEqual(self.install(proj).returncode, 0)
         self.assertEqual((proj / ".mcp.json").read_text(encoding="utf-8"), "{ not json")
 
-    def test_user_level_files_untouched_by_default(self):
+    def test_nothing_outside_the_project_is_written(self):
         proj = self.tmp / "proj"
         proj.mkdir()
         self.install(proj)
+        self.assertEqual(self.install(proj, "--user-config").returncode, 0)  # deprecated, ignored
         self.assertFalse((self.tmp / "home" / ".gemini").exists())
-        self.assertEqual(self.install(proj, "--user-config").returncode, 0)
-        cfg = json.loads((self.tmp / "home" / ".gemini" / "config" / "mcp_config.json").read_text(encoding="utf-8"))
-        self.assertIn("huddle", cfg["mcpServers"])
+        cfg = json.loads((proj / ".agents" / "mcp_config.json").read_text(encoding="utf-8"))
+        self.assertEqual(cfg["mcpServers"]["huddle"]["env"], {"HUDDLE_DEFAULT_NAME": "gemini"})
+        self.assertEqual(cfg["mcpServers"]["huddle"]["args"], [".huddle/huddle_mcp.py"])
 
     def test_refuses_to_install_into_itself_and_noninteractive_without_yes(self):
         self.assertNotEqual(self.install(REPO).returncode, 0)
@@ -363,6 +364,7 @@ class InstallerTests(Base):
         self.assertEqual(json.loads((proj / ".mcp.json").read_text(encoding="utf-8")), {"mcpServers": {"other": {"command": "x"}}})
         self.assertFalse((proj / ".huddle").exists())
         self.assertFalse((proj / ".claude/commands/huddle.md").exists())
+        self.assertNotIn("huddle", json.loads((proj / ".agents" / "mcp_config.json").read_text(encoding="utf-8")).get("mcpServers", {}))
 
 
 if __name__ == "__main__":

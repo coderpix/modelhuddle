@@ -57,23 +57,17 @@ Her ajan kısa bir ad seçer, panoya katılır, bir kez okur ve çalışmaya ba�
 | hepsi | `.huddle/` (betikler), `.huddle/.gitignore` | durum `.huddle/state/` içindedir, git'e girmez |
 | Claude Code | `.claude/commands/huddle.md`, `.mcp.json`, `.claude/settings.json` (3 hook) | Claude ilk açılışta MCP sunucusunu ve hook'ları onaylamanı ister |
 | OpenCode | `.opencode/command/huddle.md`, `.opencode/plugins/huddle.js`, `opencode.json` | `opencode mcp list` ile kontrol et (ilk çağrı sunucu yok derse tekrar çalıştır; arka plan servisi henüz açılıyor olabilir) |
-| Antigravity | `.agent/workflows/huddle.md`, `.agents/hooks.json` | MCP **kullanıcı düzeyinde** bir dosyada durur, aşağıya bak |
+| Antigravity | `.agent/workflows/huddle.md`, `.agents/hooks.json`, `.agents/mcp_config.json` | aşağıdaki Antigravity bölümüne bak |
 
 Mevcut dosyalar **birleştirilir, ezilmez**. Zaten var olan ve içeriği farklı bir anahtar uyarıyla atlanır (`--force` yalnızca o anahtarı değiştirir ve `.huddle-backup` yedeği bırakır). Geçerli JSON olmayan bir ayar dosyasına dokunulmaz. Araç seçimi: `--tools claude,opencode`.
 
 ### Antigravity (Gemini)
 
-Antigravity MCP sunucularını projeden değil **kullanıcı** klasöründen okur, bu yüzden kurulum varsayılan olarak yalnızca eklenecek girdiyi yazdırır. Ya kendin eklersin ya da yedek alarak kuruluma yaptırırsın:
+Antigravity (IDE ve CLI) proje MCP sunucularını `<proje>/.agents/mcp_config.json` dosyasından okur; kurulum `huddle` girdisini oraya yazar ve projenin dışında hiçbir şeye dokunmaz. Antigravity'yi yeniden başlat ve **yeni** bir sohbet aç, çünkü araç listesi sohbet başında oluşur: `huddle` 9 araçla listelenmeli (IDE: **Manage MCPs**; CLI: `agy mcp list` yalnızca kullanıcı düzeyindeki sunucuları gösterir, bunun yerine ajandan `huddle_*` araçlarını saymasını iste). Ajan bir MCP aracını ilk çağırışında izin isteyebilir. MCP olmadan da ajan kabuk komutlarıyla çalışır.
 
-```bash
-python install.py /proje/klasorun --user-config
-```
+> **Başka araçların eski MCP sunucuları:** kullanıcı düzeyindeki `~/.gemini/config/mcp_config.json` her proje için geçerlidir. İçinde başka bir kitin sunucusu varsa (örneğin eski bir `duo` sunucusu), ajan o araçları çağırıp bu projenin değil o kitin panosuyla konuşabilir. Ona `huddle_*` araçlarını veya yalnızca kabuk komutlarını (`python .huddle/huddle.py ...`) kullanmasını söyle, ya da eski sunucuyu kapat (`agy mcp disable <ad>`).
 
-Antigravity'nin gerçekten okuduğu dosya `~/.gemini/config/mcp_config.json`'dır (`~/.gemini/antigravity/mcp_config.json` eski, taşınmış konumdur ve okunmaz). `command` alanına Python'un tam yolunu yaz, çünkü IDE farklı bir `PATH` ile çalışıyor olabilir. Düzenledikten sonra Antigravity'yi yeniden başlat ve **Manage MCPs** ekranını aç: `huddle` 9 araçla listelenmeli. **Yeni** bir sohbet aç, çünkü araç listesi sohbet başında oluşur. MCP olmadan da ajan kabuk komutlarıyla çalışır.
-
-> **Kullanıcı başına tek pano:** `mcp_config.json` tüm Antigravity pencereleri için ortaktır ve tek bir sabit betik yolu içerir. Başka bir projenin `.huddle/` klasörünü gösteriyorsa (örneğin eski bir kurulumdan), ajan açtığın projenin değil o projenin panosuyla konuşur. Aynı anda tek proje kullan, girdiyi doğru projeye yönlendir ya da ajana yalnızca kabuk komutlarını (`python .huddle/huddle.py ...`) kullanmasını söyle.
-
-Hook'lar projede (`.agents/hooks.json`) durur ve Antigravity CLI'da (`agy`) çalışır. Antigravity onları `.agents` klasöründen çalıştırır ve tırnaklı yolları anlamaz, bu yüzden kurulum `python ../.huddle/huddle_hook.py --name gemini` yazar; `python` senin `PATH`'inde olmalı.
+Hook'lar da projede (`.agents/hooks.json`) durur ve Antigravity CLI'da (`agy`) çalışır. Antigravity onları `.agents` klasöründen çalıştırır ve tırnaklı yolları anlamaz, bu yüzden kurulum `python ../.huddle/huddle_hook.py --name gemini` yazar; `python` senin `PATH`'inde olmalı.
 
 ## Önerilen çalışma şekli
 
@@ -140,7 +134,7 @@ python .huddle/huddle.py done 1 --as gemini --note "düğme çalışıyor"
 - Kullanıcı girdisi komut satırına `--` ayırıcısından sonra geçer, bayrak olarak okunamaz (MCP üzerinden dahil test edildi).
 - Ajan adları kısa bir slug kuralına uymalıdır (`[a-z0-9._-]`, en fazla 31 karakter).
 - Hook her hatayı yutar ve 0 ile çıkar, bu yüzden oturumu bozamaz; yalnızca panoya katılmış ajan için çalışır.
-- Proje dışındaki ayarlara yalnızca `--user-config` ile, yedek alınarak yazılır.
+- Proje klasörünün dışına hiçbir şey yazılmaz (eski `--user-config` bayrağı yok sayılır).
 - Test edildi: eşzamanlı yazanlar hiçbir şey kaybetmez, başarısız yazma durumu bozmaz, ASCII dışı metin Windows konsollarında bozulmaz.
 
 Güvenlik açıklarını özel olarak e-postayla bildir: security@coderpix.com (bkz. [SECURITY.md](SECURITY.md)).
