@@ -196,7 +196,7 @@ Report vulnerabilities privately by email: security@coderpix.com (see [SECURITY.
 
 ## Limits (honest list)
 
-- **Platforms:** the live testing was done on Windows 11. The code is standard-library Python and the test suite runs on Linux and macOS in CI, but the generated hooks, MCP entries and plugin call plain `python`; where only `python3` exists they will not start (`doctor` warns about it). A fix is on the [roadmap](ROADMAP.md).
+- **Platforms:** the live testing was done on Windows 11. The code is standard-library Python and a GitHub Actions workflow runs the tests on Linux, macOS and Windows, but no real tool was tried live on macOS or Linux, and the generated hooks, MCP entries and plugin call plain `python`; where only `python3` exists they will not start (`doctor` warns about it). A fix is on the [roadmap](ROADMAP.md).
 - **Wake-up** differs per tool, see the table above. Claude Code and Antigravity agents that sit idle without waiting are not woken by hooks. `Stop` in Antigravity (keep the agent going) is covered by tests but has not been seen live; the older OpenCode v1 plugin entry point is untested. Nothing starts a chat that is closed.
 - **Conflict protection** works on the file, directory and glob patterns written on the tasks, not by watching the file system or git; a task without `--files` is not protected. A claim whose owner has been silent for `HUDDLE_STALE_MINUTES` (default 120) is released when someone conflicts with it.
 - State is local to one machine and one project folder; there is no network sync.

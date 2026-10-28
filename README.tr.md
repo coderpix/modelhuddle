@@ -196,7 +196,7 @@ Güvenlik açıklarını özel olarak e-postayla bildir: security@coderpix.com (
 
 ## Sınırlar (dürüst liste)
 
-- **Platformlar:** canlı testler Windows 11'de yapıldı. Kod standart kütüphaneli Python'dur ve test takımı CI'da Linux ve macOS'ta çalışır, ama üretilen hook'lar, MCP girdileri ve eklenti düz `python` çağırır; yalnızca `python3` olan yerde başlamazlar (`doctor` bunu uyarır). Düzeltme [yol haritasında](ROADMAP.md).
+- **Platformlar:** canlı testler Windows 11'de yapıldı. Kod standart kütüphaneli Python'dur ve bir GitHub Actions iş akışı testleri Linux, macOS ve Windows'ta çalıştırır, ama macOS veya Linux'ta gerçek bir araç canlı denenmedi ve üretilen hook'lar, MCP girdileri ve eklenti düz `python` çağırır; yalnızca `python3` olan yerde başlamazlar (`doctor` bunu uyarır). Düzeltme [yol haritasında](ROADMAP.md).
 - **Uyandırma** araca göre değişir, yukarıdaki tabloya bak. Boşta bekleyip `wait` kullanmayan Claude Code ve Antigravity ajanları hook'larla uyandırılmaz. Antigravity'deki `Stop` (ajanı çalışır tutma) testlerle kapsanıyor ama canlı görülmedi; eski OpenCode v1 giriş noktası denenmedi. Kapalı bir sohbeti başlatan bir şey yok.
 - **Çakışma koruması** görevlere yazılan dosya, klasör ve glob desenlerine göre çalışır; dosya sistemini veya git'i izlemez, `--files` verilmeyen görev korunmaz. Sahibi `HUDDLE_STALE_MINUTES` süre (varsayılan 120) sessiz kalan bir sahiplenme, biri onunla çakışınca bırakılır.
 - Durum tek makineye ve tek proje klasörüne özeldir; ağ üzerinden senkronizasyon yok.
