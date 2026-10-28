@@ -48,7 +48,7 @@ The installer prints exactly what it will do and asks before changing anything (
 
 Each agent picks a short name, joins the board, reads it once and starts working. Check the setup any time with `python .huddle/huddle.py doctor`.
 
-Run `/huddle` **once in every new chat**: the board remembers the agent's name, but a fresh chat does not know who it is. Joining again with the same name is safe (it updates the entry, it does not add a second one). Until an agent has joined, the hooks and the plugin do nothing, so installing never disturbs a tool you are not using on the board. Hooks and the plugin deliver to the default names `claude`, `opencode` and `gemini`, so the `/huddle` command tells each tool to join under its own name (the real model goes in `--model`). To use another name, set the `HUDDLE_NAME` environment variable for that tool before starting it, e.g. `HUDDLE_NAME=gpt-6-1 opencode`; otherwise messages are not delivered automatically (the agent can still read them with `inbox` or `huddle_wait`).
+Run `/huddle` **once in every new chat**: the board remembers the agent's name, but a fresh chat does not know who it is. Joining again with the same name is safe (it updates the entry, it does not add a second one). Until an agent has joined, the hooks and the plugin do nothing, so installing never disturbs a tool you are not using on the board. Hooks and the plugin deliver by name, so every tool has a fixed agent name: `claude`, `opencode`, `gemini`. The installer writes it into each tool's MCP config (`HUDDLE_DEFAULT_NAME`), and the MCP server uses it instead of whatever name the model sends: a model likes to name itself after itself (`gpt-6`), which would break delivery. The real model still shows up in the roster (`--model`). For a second window of the same tool, set `HUDDLE_NAME` before starting it, e.g. `HUDDLE_NAME=opencode-2 opencode`; it beats the fixed name, in the hooks, the plugin and the MCP server. Agents that use only shell commands follow the name in the `/huddle` command text.
 
 ### What the installer changes
 
@@ -167,7 +167,7 @@ Removes what the installer added (merged keys only, your other settings stay) an
 python -m unittest discover -s tests -v
 ```
 
-24 tests run against temporary folders and never touch your real settings.
+25 tests run against temporary folders and never touch your real settings.
 
 ## License
 

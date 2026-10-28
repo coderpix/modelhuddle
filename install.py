@@ -135,7 +135,7 @@ def install_claude(ctx: Ctx) -> None:
     data, ok = read_json(mcp, ctx)
     if ok:
         servers = data.setdefault("mcpServers", {})
-        if merge_key(servers, "huddle", {"command": "python", "args": [".huddle/huddle_mcp.py"]}, ctx, ".mcp.json mcpServers.huddle"):
+        if merge_key(servers, "huddle", {"command": "python", "args": [".huddle/huddle_mcp.py"], "env": {"HUDDLE_DEFAULT_NAME": "claude"}}, ctx, ".mcp.json mcpServers.huddle"):
             write_json(mcp, data, ctx, mcp.exists())
     st = ctx.project / ".claude" / "settings.json"
     data, ok = read_json(st, ctx)
@@ -162,7 +162,7 @@ def install_opencode(ctx: Ctx) -> None:
     data, ok = read_json(cfg, ctx)
     if ok:
         servers = data.setdefault("mcp", {}).setdefault("servers", {})
-        if merge_key(servers, "huddle", {"type": "local", "command": ["python", ".huddle/huddle_mcp.py"]}, ctx, "opencode.json mcp.servers.huddle"):
+        if merge_key(servers, "huddle", {"type": "local", "command": ["python", ".huddle/huddle_mcp.py"], "environment": {"HUDDLE_DEFAULT_NAME": "opencode"}}, ctx, "opencode.json mcp.servers.huddle"):
             write_json(cfg, data, ctx, cfg.exists())
 
 
@@ -178,7 +178,7 @@ def install_antigravity(ctx: Ctx) -> None:
     if ok and merge_key(data, "huddle", {"PreInvocation": handler, "Stop": handler}, ctx, ".agents/hooks.json huddle"):
         write_json(hooks_file, data, ctx, hooks_file.exists())
     script = (ctx.project / ".huddle" / "huddle_mcp.py").resolve().as_posix()
-    entry = {"command": Path(sys.executable).as_posix(), "args": [script]}
+    entry = {"command": Path(sys.executable).as_posix(), "args": [script], "env": {"HUDDLE_DEFAULT_NAME": "gemini"}}
     cfg = Path.home() / ".gemini" / "config" / "mcp_config.json"
     if not ctx.user_config:
         print(f"  Antigravity reads a USER-level file, which this installer does not touch by default.")

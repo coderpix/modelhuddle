@@ -32,9 +32,9 @@ def huddle(state: Path, *args: str) -> subprocess.CompletedProcess:
 
 
 class McpClient:
-    def __init__(self, state: Path):
+    def __init__(self, state: Path, **extra_env):
         self.p = subprocess.Popen([PY, str(SRC / "huddle_mcp.py")], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE, env=env_for(state))
+                                  stderr=subprocess.PIPE, env={**env_for(state), **extra_env})
         self.i = 0
         self.rpc("initialize", {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}})
 
@@ -175,6 +175,20 @@ class McpTests(Base):
             err, text = c.tool("huddle_inbox", **{"as": "b"})
             self.assertFalse(err)
             self.assertIn("Şu çok güzel: ığüşöç", text)
+        finally:
+            c.close()
+
+    def test_fixed_name_replaces_the_name_the_model_sends(self):
+        c = McpClient(self.state, HUDDLE_DEFAULT_NAME="opencode")
+        try:
+            self.assertFalse(c.tool("huddle_join", **{"as": "gpt-6"})[0])
+            self.assertEqual(list(json.loads((self.state / "agents.json").read_text(encoding="utf-8"))), ["opencode"])
+        finally:
+            c.close()
+        c = McpClient(self.state, HUDDLE_DEFAULT_NAME="opencode", HUDDLE_NAME="opencode-2")  # per-window override wins
+        try:
+            self.assertFalse(c.tool("huddle_join", **{"as": "gpt-6"})[0])
+            self.assertIn("opencode-2", json.loads((self.state / "agents.json").read_text(encoding="utf-8")))
         finally:
             c.close()
 

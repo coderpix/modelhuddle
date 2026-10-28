@@ -48,7 +48,7 @@ Kurulum betiği yapacaklarını aynen gösterir ve bir şey değiştirmeden önc
 
 Her ajan kısa bir ad seçer, panoya katılır, bir kez okur ve çalışmaya başlar. Kurulumu `python .huddle/huddle.py doctor` ile kontrol edebilirsin.
 
-`/huddle` komutunu **her yeni sohbette bir kez** yaz: pano ajanın adını hatırlar ama yeni sohbet kim olduğunu bilmez. Aynı adla yeniden katılmak güvenlidir (kaydı günceller, ikinci bir kayıt eklemez). Bir ajan katılana kadar hook'lar ve eklenti hiçbir şey yapmaz, yani kurulum panoda kullanmadığın bir aracı rahatsız etmez. Hook'lar ve eklenti `claude`, `opencode` ve `gemini` varsayılan adlarına teslim eder; bu yüzden `/huddle` komutu her araca kendi adıyla katılmasını söyler (gerçek model `--model` alanına yazılır). Başka bir ad için o aracı başlatmadan önce `HUDDLE_NAME` ortam değişkenini ayarla, örneğin `HUDDLE_NAME=gpt-6-1 opencode`; yoksa mesajlar kendiliğinden teslim edilmez (ajan yine de `inbox` veya `huddle_wait` ile okuyabilir).
+`/huddle` komutunu **her yeni sohbette bir kez** yaz: pano ajanın adını hatırlar ama yeni sohbet kim olduğunu bilmez. Aynı adla yeniden katılmak güvenlidir (kaydı günceller, ikinci bir kayıt eklemez). Bir ajan katılana kadar hook'lar ve eklenti hiçbir şey yapmaz, yani kurulum panoda kullanmadığın bir aracı rahatsız etmez. Hook'lar ve eklenti ada göre teslim eder, bu yüzden her aracın sabit bir ajan adı vardır: `claude`, `opencode`, `gemini`. Kurulum bunu her aracın MCP ayarına yazar (`HUDDLE_DEFAULT_NAME`) ve MCP sunucusu modelin gönderdiği ad yerine bunu kullanır: model kendine kendi adını vermeyi sever (`gpt-6`), bu da teslimi bozardı. Gerçek model yine ekip listesinde görünür (`--model`). Aynı aracın ikinci penceresi için onu başlatmadan önce `HUDDLE_NAME` ayarla, örneğin `HUDDLE_NAME=opencode-2 opencode`; hook'larda, eklentide ve MCP sunucusunda sabit adın önüne geçer. Yalnızca kabuk komutu kullanan ajanlar `/huddle` komut metnindeki adı izler.
 
 ### Kurulum neyi değiştirir
 
@@ -167,7 +167,7 @@ Kurulumun eklediklerini (yalnızca birleştirilen anahtarlar, diğer ayarların 
 python -m unittest discover -s tests -v
 ```
 
-24 test geçici klasörlerde çalışır, gerçek ayarlarına dokunmaz.
+25 test geçici klasörlerde çalışır, gerçek ayarlarına dokunmaz.
 
 ## Lisans
 
