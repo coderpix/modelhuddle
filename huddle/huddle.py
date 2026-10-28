@@ -146,8 +146,10 @@ def touch_roster(who: str) -> None:
     """Register an unknown agent and record that it was active just now."""
     r = load_roster()
     entry = r.setdefault(who, {"model": "", "strengths": "", "joined": now()})
-    if entry.get("seen") != now():
+    if entry.get("seen") != now() or "state" not in entry:
         entry["seen"] = now()
+        if "state" not in entry:  # a board command means it is at work (hooks refine this later)
+            entry.update(state="working", active_ts=round(time.time()))
         save_roster(r)
 
 

@@ -378,7 +378,10 @@ class DashboardTests(Base):
         d = json.loads(body)
         agents = {a["name"]: a for a in d["agents"]}
         self.assertEqual(agents["claude"]["state"], "working")
-        self.assertEqual(agents["opencode"]["tasks"], [1])
+        self.assertEqual(agents["opencode"]["holding"], [{"id": 1, "title": "Demo <b>task</b>"}])
+        self.assertIn("claimed #1", agents["opencode"]["last"]["text"])  # last action, from the log
+        self.assertEqual(d["summary"]["agents"], 2)
+        self.assertEqual((d["summary"]["claimed"], d["summary"]["done"]), (1, 0))
         self.assertEqual(agents["opencode"]["unread"], 1)
         self.assertEqual(d["tasks"][0]["title"], "Demo <b>task</b>")
         self.assertEqual(d["messages"][0]["text"], "<script>alert(1)</script> hi")  # raw data, rendered with textContent
